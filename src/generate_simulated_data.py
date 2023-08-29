@@ -670,6 +670,9 @@ class Patient:
             os.mkdir(data_directory)
             
         self.data_directory = f'{data_directory}/{self.name}'
+        if not os.path.exists(self.data_directory):
+            print(f'Making directory for {self.name} at {self.data_directory}')
+            os.mkdir(self.data_directory)
 
         self.age = age
         self.tumor_molecular_subtype = tumor_molecular_subtype
@@ -745,21 +748,34 @@ class Patient:
             # normal_vcf: cnv_suite expects a file path
             sample.sim_hets(self.normal_vcf, self.hets_df, output_dir)
 
-    def set_treatments(self, treatment_fn=None):
+    def set_treatments(
+        self, 
+        treatment_fn=None,
+        num_treatments=2,
+        categories=['Chemotherapy', 'Precision/Targeted therapy'],
+        drugs=['Trastuzumab', 'Neratinib'],
+        drug_combination=[np.nan, np.nan],
+        start_date_dfd=[100, 200],
+        stop_date_dfd=[200, 300],
+        stop_reason=['Unknown', 'Unknown'],
+        pre_status=[np.nan, np.nan],
+        post_status=['Unknown', 'Unknown'],
+        notes=[np.nan, np.nan]
+    ):
         if treatment_fn:
             self.treatment_fn = treatment_fn
         elif treatment_fn is None:
             treatments = pd.DataFrame({
-                'participant_id': [self.name, self.name],
-                'categories': ['Chemotherapy', 'Precision/Targeted therapy'],
-                'drugs': ['Trastuzumab', 'Neratinib'],
-                'drug_combination': [np.nan, np.nan],
-                'start_date_dfd': [100, 200],
-                'stop_date_dfd': [200, 300],
-                'stop_reason': ['Unknown', 'Unknown'],
-                'pre_status': [np.nan, np.nan],
-                'post_status': ['Unknown', 'Unknown'],
-                'notes': [np.nan, np.nan]
+                'participant_id': [self.name] * num_treatments,
+                'categories': categories, 
+                'drugs': drugs, 
+                'drug_combination': drug_combination, 
+                'start_date_dfd': start_date_dfd, 
+                'stop_date_dfd': stop_date_dfd, 
+                'stop_reason': stop_reason, 
+                'pre_status': pre_status, 
+                'post_status': post_status, 
+                'notes': notes, 
             })
             treatment_fn = f'{self.data_directory}/{self.name}_treatments.txt'
             treatments.to_csv(treatment_fn, sep='\t', index=False)
@@ -1049,8 +1065,8 @@ class Patient:
 
         patient_data_df = pd.DataFrame({
             'participant_id': [self.name], 
-            'maf_fn': [f'{self.phylogicNDT_results_dir}/{self.name}.mut_ccfs.tsv'], 
-            'cluster_ccfs_fn': [f'{self.phylogicNDT_results_dir}/{self.name}.cluster_ccfs.tsv'], 
+            'maf_fn': [f'{self.phylogicNDT_results_dir}/{self.name}.mut_ccfs.txt'], 
+            'cluster_ccfs_fn': [f'{self.phylogicNDT_results_dir}/{self.name}.cluster_ccfs.txt'], 
             'build_tree_posterior_fn': [f'{self.phylogicNDT_results_dir}/{self.name}_build_tree_posteriors.tsv'],
             'tumor_molecular_subtype': self.tumor_molecular_subtype,
             'tumor_morphology': self.tumor_morphology,
@@ -1068,6 +1084,64 @@ class Patient:
         self.patient_reviewer_patient_data_fn = f'{self.patient_reviewer_data_dir}/patient1_data.tsv'
         patient_data_df.to_csv(self.patient_reviewer_patient_data_fn, sep='\t', index=False)
         print(f'Generated patient_reviewer_patient_data_fn: {self.patient_reviewer_patient_data_fn}')
+
+
+    def set_all_data(
+        self, 
+        arm_num=20,
+        focal_num=3,
+        p_whole=0.6,
+        ratio_clonal=0.5,
+        target_intervals_df: pd.DataFrame = None,
+        normal_vcf_path: str = None,
+        local_fasta_file_path: str = None,
+        genes_df: pd.DataFrame = None,
+        num_variants=100,
+        force_add_variants=[], # [{'gene':, 'chrom':, 'pos':, 'ref_allele':, 'alt_allele':, 'cluster':, 'allele'}]
+        python2_path='/Users/cchu/opt/anaconda3/envs/phylogicNDT_py27_env/bin/python',
+        phylogicNDT_py_path='src/PhylogicNDT/PhylogicNDT.py'
+    ):
+        self.set_treatments()
+        self.set_cnv_profile(
+            arm_num=arm_num,
+            focal_num=focal_num,
+            p_whole=p_whole,
+            ratio_clonal=ratio_clonal,
+        )
+        self.set_sample_cnv_profiles()
+
+        self.set_sample_coverage(
+            target_intervals_df=target_intervals_df, 
+            override=False
+        )
+
+        self.set_hets_df(
+            normal_vcf=normal_vcf_path, 
+            target_intervals_df=target_intervals_df
+        )
+
+        self.set_variants_df(target_intervals_df, local_fasta_file_path, genes_df, num_variants=num_variants)
+
+        for variant_dict in force_add_variants:
+            self.force_add_variant(
+                target_intervals_df, 
+                **variant_dict,
+                # gene='TP53', 
+                # chrom='17', 
+                # pos='7578190', # hg19 coordinate 
+                # ref_allele='T', 
+                # alt_allele='C', 
+                # cluster=3, 
+                # allele='paternal'
+            )
+
+        self.generate_phylogicNDT_sif()
+        self.run_phylogicNDT(
+            python2_path=python2_path,
+            phylogicNDT_py_path=phylogicNDT_py_path,
+        )
+
+        self.set_up_patient_reviewer_data()
         
 
 def prep_gencode_gene_df(gene_tsv_fn='gencode.v19.annotation.gene_only.tsv'):
