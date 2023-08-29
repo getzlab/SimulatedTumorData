@@ -1,0 +1,3 @@
+[submodule "src/PhylogicNDT"]
+	path = src/PhylogicNDT
+	url = git@github.com:broadinstitute/PhylogicNDT.git

@@ -1,0 +1,4 @@
+sample_id	maf_fn	wxs_purity	collection_date_dfd	cnv_seg_fn	participant_id	preservation_method	wxs_ploidy
+t1	./sim_data/patient1/sample_muts/t1.variants.tsv	0.7	100	./sim_data/patient1/sample_cnv_profiles/t1.simulated_seg.tsv	patient1		2
+t2	./sim_data/patient1/sample_muts/t2.variants.tsv	0.45	100	./sim_data/patient1/sample_cnv_profiles/t2.simulated_seg.tsv	patient1		2
+t3	./sim_data/patient1/sample_muts/t3.variants.tsv	0.9	100	./sim_data/patient1/sample_cnv_profiles/t3.simulated_seg.tsv	patient1		2

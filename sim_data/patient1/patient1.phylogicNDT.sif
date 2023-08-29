@@ -1,0 +1,4 @@
+sample_id	maf_fn	seg_fn	purity	timepoint
+t1	./sim_data/patient1/sample_muts/t1.variants.tsv		0.7	100
+t2	./sim_data/patient1/sample_muts/t2.variants.tsv		0.45	100
+t3	./sim_data/patient1/sample_muts/t3.variants.tsv		0.9	100
