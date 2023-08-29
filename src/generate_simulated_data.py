@@ -207,6 +207,7 @@ class Sample:
         return self.clone_ccfs
 
     def set_cnv_profile(self, num_subclones, parents, event_trees, data_directory):
+        
         phylogeny = simulate.CNV_Profile().phylogeny
         phy_dict = {
             'num_subclones': num_subclones,
@@ -280,7 +281,7 @@ class Sample:
         # for each segment estimate the expected allelic imbalance given the purity
         self.hets_fn = f'{output_dir}/{self.name}.hets.tsv'
 
-        if not override:
+        if not override and os.path.exists(self.hets_fn):
             print(f'Loading {self.hets_fn}')
             self.hets_df = pd.read_csv(self.hets_fn, sep='\t', index_col=0)
             return
@@ -381,8 +382,16 @@ class Sample:
         axes[1].legend(bbox_to_anchor=(1.0, 1.0))
         return fig, axes
 
-    def sim_mut_vafs(self, variants_df, patient_name, data_directory):
+    def sim_mut_vafs(self, variants_df, patient_name, data_directory, overwrite=False):
         # Given set of sites estimate the expected allele fraction
+
+        self.variants_fn = f'{data_directory}/{self.name}.variants.tsv'
+
+        if not overwrite and os.path.exists(self.variants_fn):
+            print(f'Sample {self.name} has variants_fn: {self.variants_fn}')
+            self.variants_df = pd.read_csv(self.variants_fn, sep='\t')
+            return 
+        
         sample_variants_df = variants_df.copy()
 
         def get_cov_and_ploidy(interval, interval_data_df):
@@ -610,8 +619,6 @@ class Sample:
         sample_variants_df['participant_id'] = patient_name
 
         self.variants_df = sample_variants_df[sample_variants_df.vaf.notna()]
-
-        self.variants_fn = f'{data_directory}/{self.name}.variants.tsv'
         self.variants_df.to_csv(self.variants_fn, sep='\t', index=False)
 
         '''
@@ -693,14 +700,25 @@ class Patient:
         ratio_clonal=0.5,
         override=False,
     ):
+        self.arm_num = arm_num
+        self.focal_num = focal_num
+        self.p_whole = p_whole
+        self.ratio_clonal = ratio_clonal
+        
         self.cnv_profile = simulate.CNV_Profile(num_subclones=self.num_subclones - 1)
-        self.cnv_profile_pkl = f'{self.data_directory}/{self.name}.cnv_events_focal{focal_num}_arm_{arm_num}.pkl'
+        # self.cnv_profile_pkl = f'{self.data_directory}/{self.name}.cnv_events_focal{focal_num}_arm_{arm_num}.pkl'
+        self.cnv_profile_pkl = f'{self.data_directory}/{self.name}.cnv_events.pkl'
 
         if os.path.exists(self.cnv_profile_pkl) and not override:
             print(f'loading existing CNV pickle file {self.cnv_profile_pkl}')
         else:
             print('Regenerating CNV events.')
-            self.cnv_profile.add_cnv_events(arm_num=arm_num, focal_num=focal_num, p_whole=p_whole, ratio_clonal=ratio_clonal)
+            self.cnv_profile.add_cnv_events(
+                arm_num=self.arm_num, 
+                focal_num=self.focal_num, 
+                p_whole=self.p_whole, 
+                ratio_clonal=self.ratio_clonal
+            )
             self.cnv_profile.pickle_events(self.cnv_profile_pkl)
 
         file = open(self.cnv_profile_pkl, 'rb')
@@ -827,8 +845,16 @@ class Patient:
     def set_variants_df(
         self, target_intervals_df, fasta_file_path, 
         prepped_gencode_gene_df=None, gene_name_col='gene', num_variants=100,
-        random_seed_val=0
+        random_seed_val=0,
+        overwrite=False,
     ):
+        self.variants_fn = f'{self.data_directory}/{self.name}.variants.tsv'
+
+        if not overwrite and os.path.exists(self.variants_fn):
+            print(f'patient variants path exists: {self.variants_fn}')
+            self.variants_df = pd.read_csv(self.variants_fn, sep='\t', index_col=0)
+            return
+        
 
         def get_alt_allele(ref_allele):
             possible_alleles = ['C', 'G', 'A', 'T']
@@ -894,8 +920,12 @@ class Patient:
                     variants_df.loc[i, 'gene'] = interval_df.iloc[0][gene_name_col]
         
         self.variants_df = variants_df
+        self.variants_df.to_csv(self.variants_fn, sep='\t')
 
-    def force_add_variant(self, target_intervals_df, gene, chrom, pos, ref_allele, alt_allele, cluster, allele='paternal'):
+    def force_add_variant(
+        self, target_intervals_df, gene, chrom, pos, ref_allele, alt_allele, cluster, allele='paternal'
+    ):
+
         new_variant = {
             'gene': gene,
             'chrom': int(chrom), 
@@ -915,7 +945,8 @@ class Patient:
         
         self.variants_df = self.variants_df.append(
             new_variant, ignore_index=True
-        ).reset_index(drop=True)
+        ).reset_index(drop=True).drop_duplicates()
+        self.variants_df.to_csv(self.variants_fn, sep='\t')
 
     def plot_ccf(self):
         reformat_ccfs_df = self.sample_ccfs_df.stack().reset_index().rename(
@@ -1038,13 +1069,15 @@ class Patient:
         full_cmd = cd_cmd + ' && ' + phylogicNDT_cmd
         self.phylogicNDT_full_cmd = full_cmd
 
-        if overwrite or not os.path.exists(self.phylogicNDT_results_dir):
-
-            os.mkdir(phylogicNDT_results_dir)
-            os.system(full_cmd)
-        else:
+        if not overwrite and os.path.exists(self.phylogicNDT_results_dir) and len(os.listdir(self.phylogicNDT_results_dir)) > 0:
             print(f'Phylogic results are already loaded here: {self.phylogicNDT_results_dir}')
+            
+        else:
+            if not os.path.exists(self.phylogicNDT_results_dir):
+                os.mkdir(self.phylogicNDT_results_dir)
 
+            os.system(full_cmd)
+        
     def set_up_patient_reviewer_data(self):
 
         self.patient_reviewer_data_dir = f'{self.data_directory}/patient_reviewer_data'
@@ -1097,9 +1130,12 @@ class Patient:
         local_fasta_file_path: str = None,
         genes_df: pd.DataFrame = None,
         num_variants=100,
+        variants_random_seed_val=1,
         force_add_variants=[], # [{'gene':, 'chrom':, 'pos':, 'ref_allele':, 'alt_allele':, 'cluster':, 'allele'}]
         python2_path='/Users/cchu/opt/anaconda3/envs/phylogicNDT_py27_env/bin/python',
-        phylogicNDT_py_path='src/PhylogicNDT/PhylogicNDT.py'
+        phylogicNDT_py_path='./src/PhylogicNDT/PhylogicNDT.py',
+        overwrite_phylogicNDT=False,
+        run_hets=False,
     ):
         self.set_treatments()
         self.set_cnv_profile(
@@ -1115,12 +1151,18 @@ class Patient:
             override=False
         )
 
-        self.set_hets_df(
-            normal_vcf=normal_vcf_path, 
-            target_intervals_df=target_intervals_df
-        )
+        if run_hets:
+            self.set_hets_df(
+                normal_vcf=normal_vcf_path, 
+                target_intervals_df=target_intervals_df
+            )
+            self.set_sample_hets()
 
-        self.set_variants_df(target_intervals_df, local_fasta_file_path, genes_df, num_variants=num_variants)
+        self.set_variants_df(
+            target_intervals_df, local_fasta_file_path, genes_df, 
+            num_variants=num_variants, random_seed_val=variants_random_seed_val
+        )
+        self.set_sample_muts()
 
         for variant_dict in force_add_variants:
             self.force_add_variant(
@@ -1139,10 +1181,10 @@ class Patient:
         self.run_phylogicNDT(
             python2_path=python2_path,
             phylogicNDT_py_path=phylogicNDT_py_path,
+            overwrite=overwrite_phylogicNDT
         )
 
         self.set_up_patient_reviewer_data()
-        
 
 def prep_gencode_gene_df(gene_tsv_fn='gencode.v19.annotation.gene_only.tsv'):
     genes = pd.read_csv(gene_tsv_fn, sep='\t', header=None)
