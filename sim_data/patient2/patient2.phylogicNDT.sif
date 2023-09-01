@@ -1,4 +1,4 @@
 sample_id	maf_fn	seg_fn	purity	timepoint
-t1	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/t1.variants.tsv		0.7	100
-t2	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/t2.variants.tsv		0.45	150
-t3	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/t3.variants.tsv		0.9	180
+p2_t1	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/p2_t1.variants.tsv		0.7	100
+p2_t2	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/p2_t2.variants.tsv		0.45	150
+p2_t3	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/p2_t3.variants.tsv		0.9	180

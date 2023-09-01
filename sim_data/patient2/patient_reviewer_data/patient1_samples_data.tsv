@@ -1,4 +1,4 @@
 sample_id	maf_fn	wxs_purity	collection_date_dfd	cnv_seg_fn	participant_id	preservation_method	wxs_ploidy
-t1	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/t1.variants.tsv	0.7	100	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_cnv_profiles/t1.simulated_seg.tsv	patient2		2
-t2	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/t2.variants.tsv	0.45	150	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_cnv_profiles/t2.simulated_seg.tsv	patient2		2
-t3	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/t3.variants.tsv	0.9	180	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_cnv_profiles/t3.simulated_seg.tsv	patient2		2
+p2_t1	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/p2_t1.variants.tsv	0.7	100	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_cnv_profiles/p2_t1.simulated_seg.tsv	patient2		2
+p2_t2	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/p2_t2.variants.tsv	0.45	150	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_cnv_profiles/p2_t2.simulated_seg.tsv	patient2		2
+p2_t3	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_muts/p2_t3.variants.tsv	0.9	180	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient2/sample_cnv_profiles/p2_t3.simulated_seg.tsv	patient2		2
