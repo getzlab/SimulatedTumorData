@@ -4,7 +4,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from AnnoMate.AppComponents.utils import cluster_color
-from AnnoMate.AppComponents.PhylogicComponents import gen_stylesheet
+from AnnoMate.AppComponents.PhylogicNDTComponents import gen_stylesheet
 import dash_cytoscape as cyto
 from dash import callback, Input, Output, Dash, html
 import pickle
@@ -649,7 +649,7 @@ class Patient:
         self, 
         name, 
         data_directory,
-        samples: list[Sample],
+        samples, # list of Sample objects
         num_subclones=7, 
         clone_tree={1: None, 2:1, 3:1, 4:2, 5:4, 6:4, 7:3},
         age=32,
@@ -1092,7 +1092,7 @@ class Patient:
         sample_data_df['wxs_ploidy'] = 2
         sample_data_df.rename(columns={'purity': 'wxs_purity', 'timepoint': 'collection_date_dfd'}, inplace=True)
 
-        self.patient_reviewer_sample_data_fn = f'{self.patient_reviewer_data_dir}/patient1_samples_data.tsv'
+        self.patient_reviewer_sample_data_fn = f'{self.patient_reviewer_data_dir}/{self.name}_samples_data.tsv'
         sample_data_df.to_csv(self.patient_reviewer_sample_data_fn, sep='\t', index=False)
         print(f'Generated patient_reviewer_sample_data_fn: {self.patient_reviewer_sample_data_fn}')
 
@@ -1194,4 +1194,33 @@ def prep_gencode_gene_df(gene_tsv_fn='gencode.v19.annotation.gene_only.tsv'):
     genes['End_position'] = genes['End_position'].astype('int')
     genes['gene'] = genes.data.apply(lambda x: re.findall('gene_name "(.*?)"', x)[0].strip())
     return genes
+
+def load_patients_and_samples(path_to_sim_data='/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data', patient_names=None):
+
+    def load_patient_pkl_fn(pkl_fn):
+        with open(pkl_fn, 'rb') as fh:
+            patient = pickle.load(fh)
+    
+        patient.data_directory = pkl_fn.rsplit('/', 1)[0]
+        patient.set_all_data()
+        return patient
+
+    if patient_names is None:
+        patient_names = pd.read_csv(f'{path_to_sim_data}/patients_pickle_objects.tsv', sep='\t', index_col=0).index.tolist()
+    # insert your local path to sim_data
+    loaded_patients = [
+        load_patient_pkl_fn(f'{path_to_sim_data}/{patient_name}/{patient_name}.pkl') for patient_name in patient_names
+    ]
+
+    samples = pd.concat([
+        pd.read_csv(patient.patient_reviewer_sample_data_fn, sep='\t', index_col='sample_id') for patient in loaded_patients
+    ])
+
+    participants = pd.concat([
+        pd.read_csv(patient.patient_reviewer_patient_data_fn, sep='\t', index_col='participant_id') for patient in loaded_patients
+    ])
+
+    return samples, participants
+
+    
 
