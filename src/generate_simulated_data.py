@@ -20,7 +20,7 @@ import tqdm
 from cnv_suite import simulate
 from cnv_suite import visualize
 from cnv_suite.utils.simulation_utils import get_contigs_from_header, single_allele_ploidy, get_average_ploidy, get_alt_count
-from cnv_suite.utils import switch_contigs
+from cnv_suite.utils import switch_contigs, calc_cn_levels, calc_avg_cn
 from cnv_suite.visualize import add_background
 from natsort import natsorted
 
@@ -206,7 +206,7 @@ class Sample:
         self.clone_ccfs = clone_ccfs
         return self.clone_ccfs
 
-    def set_cnv_profile(self, num_subclones, parents, event_trees, data_directory):
+    def set_cnv_profile(self, num_subclones, parents, event_trees, data_directory, drop_sex_chr=True):
         
         phylogeny = simulate.CNV_Profile().phylogeny
         phy_dict = {
@@ -231,7 +231,49 @@ class Sample:
         self.cnv_profile = cnv_profile
         
         self.absolute_cnv_profile_fn = f'{data_directory}/{self.name}.simulated_seg.tsv'
-        cnv_profile.cnv_profile_df.to_csv(self.absolute_cnv_profile_fn, index=False, sep='\t')
+
+        if drop_sex_chr:
+            self.absolute_cnv_profile_df = cnv_profile.cnv_profile_df[
+                ~cnv_profile.cnv_profile_df['Chromosome'].isin(['X', 'Y', '23', '24', 23, 24])
+            ].copy().reset_index(drop=True)
+        else:
+            self.absolute_cnv_profile_df = cnv_profile.cnv_profile_df.copy().reset_index(drop=True)
+            
+        self.absolute_cnv_profile_df.to_csv(self.absolute_cnv_profile_fn, index=False, sep='\t')
+
+        # ACR version
+        self.acr_cnv_profile_fn = f'{data_directory}/{self.name}.simulated_seg.acr.tsv'
+        acr_cnv_profile_df = self.absolute_cnv_profile_df.copy()
+
+        # ploidy of whole sample
+        ploidy = (
+            acr_cnv_profile_df['length'] * (
+                (
+                    acr_cnv_profile_df['mu.minor'] + acr_cnv_profile_df['mu.major']) * self.purity  + (1 - self.purity) * 2
+            )
+        ).sum() / acr_cnv_profile_df['length'].sum()
+        ploidy = np.round(ploidy, 2)
+        
+        self.ploidy = ploidy
+        cn_zero, cn_delta = calc_cn_levels(
+            purity=self.purity, 
+            ploidy=self.ploidy, 
+            avg_cn=calc_avg_cn(acr_cnv_profile_df, allele_col='mu.minor', total_cn_col='tau')
+        )
+        acr_cnv_profile_df['mu.minor'] = acr_cnv_profile_df['mu.minor'] * cn_delta + cn_zero
+        acr_cnv_profile_df['mu.major'] = acr_cnv_profile_df['mu.major'] * cn_delta + cn_zero
+        acr_cnv_profile_df['sigma.minor'] = acr_cnv_profile_df['sigma.minor'] / cn_delta
+        acr_cnv_profile_df['sigma.major'] = acr_cnv_profile_df['sigma.minor'] / cn_delta
+
+
+        if drop_sex_chr:
+            self.acr_cnv_profile_df = acr_cnv_profile_df[
+                ~acr_cnv_profile_df['Chromosome'].isin(['X', 'Y', '23', '24', 23, 24])
+            ].copy().reset_index(drop=True)
+        else:
+            self.acr_cnv_profile_df = acr_cnv_profile_df.copy().reset_index(drop=True)
+            
+        self.acr_cnv_profile_df.to_csv(self.acr_cnv_profile_fn, index=False, sep='\t')
 
     def set_acr_profile(self):
         # Allelic copy ratio seg file
@@ -240,17 +282,37 @@ class Sample:
         acr_cnv_profile_df['mu.minor'] = acr_cnv_profile_df['mu.minor'] * ccf * self.purity + (1 - self.purity) / 2
         acr_cnv_profile_df['mu.major'] = acr_cnv_profile_df['mu.major'] * ccf * self.purity + (1 - self.purity) / 2
 
-    def plot_cn_profile(self):
-        fig, ax = plt.subplots(1,1, figsize=(10, 4))
-        fig = visualize.plot_cnv_profile.plot_acr_static(
-            self.cnv_profile.cnv_profile_df, 
-            ax, self.cnv_profile.csize, #cnv_profile.csize, 
-            segment_colors='difference', 
-            sigmas=False, 
-            min_seg_lw=3, 
-            y_upper_lim=3
-        )
+    def plot_cn_profile(self, absolute=True, interactive=False):
 
+        seg_df = self.absolute_cnv_profile_df.copy() if absolute else self.acr_cnv_profile_df.copy()
+
+        if interactive:
+            fig, seg_df, trace_num, trace_end = visualize.plot_cnv_profile.plot_acr_interactive(
+                seg_df, 
+                self.cnv_profile.csize, 
+                purity=self.purity, ploidy=self.ploidy,
+                segment_colors='difference', 
+                sigmas=True, 
+                min_seg_lw=0.015, 
+                y_upper_lim=3
+            )
+            fig.update_layout(
+                autosize=False,
+                width=1000,
+                height=500
+            )
+            fig.show()
+        else:
+            fig, ax = plt.subplots(1,1, figsize=(10, 4))
+            fig = visualize.plot_cnv_profile.plot_acr_static(
+                seg_df, 
+                ax, self.cnv_profile.csize, #cnv_profile.csize, 
+                segment_colors='difference', 
+                sigmas=True, 
+                min_seg_lw=3, 
+                y_upper_lim=3
+            )
+            
     def sim_coverage(self, target_intervals_df, output_folder, sigma, x_coverage, override=False):
 
         self.binned_coverage_fn = f'{output_folder}/{self.name}.binned_coverage.tsv'
@@ -1085,11 +1147,12 @@ class Patient:
             os.mkdir(self.patient_reviewer_data_dir)
         
         sample_data_df = pd.read_csv(self.sif_fn, sep='\t')
-        sample_data_df['cnv_seg_fn'] = [s.absolute_cnv_profile_fn for s in self.samples]
+        # sample_data_df['absolute_cnv_seg_fn'] = [s.absolute_cnv_profile_fn for s in self.samples]
+        sample_data_df['cnv_seg_fn'] = [s.acr_cnv_profile_fn for s in self.samples]
         sample_data_df.drop(['seg_fn'], axis=1, inplace=True)
         sample_data_df['participant_id'] = self.name
         sample_data_df['preservation_method'] = np.nan
-        sample_data_df['wxs_ploidy'] = 2
+        sample_data_df['wxs_ploidy'] = [s.ploidy for s in self.samples]
         sample_data_df.rename(columns={'purity': 'wxs_purity', 'timepoint': 'collection_date_dfd'}, inplace=True)
 
         self.patient_reviewer_sample_data_fn = f'{self.patient_reviewer_data_dir}/{self.name}_samples_data.tsv'
