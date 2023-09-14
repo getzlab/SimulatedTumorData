@@ -1439,7 +1439,9 @@ def load_patients_and_samples(path_to_sim_data='/Users/cchu/Desktop/Methods/Simu
             patient = pickle.load(fh)
     
         patient.data_directory = pkl_fn.rsplit('/', 1)[0]
-        patient.set_all_data()
+        print(patient.phylogicNDT_results_dir)
+        patient.set_all_data_part1()
+        patient.set_all_data_part2()
         return patient
 
     if patient_names is None:
