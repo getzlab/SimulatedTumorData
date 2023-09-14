@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<head>
+  <title>patient1 Phylogic Report</title>
+  <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+  <script src="https://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css">
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js"></script>
+  <script src="https://d3js.org/d3.v5.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.sample_name_table", {
+
+        options: {
+          columns: [],
+          sample_names: [],
+          sample_aliases: [],
+          sample_dates: [],
+          pie_plots: []
+        },
+
+
+        _create: function() {
+          let columns = this.options.columns;
+
+          let table = d3.select(this.element.context).append("table")
+            .attr("class", "table table-bordered hover");
+
+          table.append("thead")
+            .selectAll("td")
+            .data(columns)
+            .join("td")
+            .attr("style", "font-weight:bold; font-size: 12px")
+            .html(d => d);
+
+          table.append("tbody")
+            .selectAll("tr")
+            .data(this.options.sample_names)
+            .join("tr")
+            .attr("style", "font-size: 12px; cursor: pointer;")
+            .attr("class", "active-sample")
+            .attr("onclick", "$(\"#sample-name-table\").sample_name_table(\"toggle_sample\", this)")
+            .html((d, i) => "<td>" + d + "</td>"
+              + (this.options.sample_aliases.length ? "<td>" + this.options.sample_aliases[i] + "</td>" : "")
+              + (this.options.sample_dates.length ? "<td>" + this.options.sample_dates[i] + "</td>" : "")
+              + "<td><img src=data:image/png;base64," + this.options.pie_plots[i] + " alt=\"Run BuildTree to display\"></td>");
+
+        },
+
+        toggle_sample: function(row) {
+          if (row.className === "active-sample") {
+            row.className = "removed-sample";
+          } else {
+            row.className = "active-sample"
+          }
+        }
+
+      });
+
+      $("#sample-name-table").sample_name_table({"sample_aliases": ["T0", "T1", "T2"], "pie_plots": ["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"], "sample_names": ["p1_t1", "p1_t2", "p1_t3"], "sample_dates": [50.0, 100.0, 120.0], "columns": ["Sample Name", "Alias", "Date", "Clonal Abundance"]})
+    });
+  </script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.clustering_plot", {
+
+        options: {
+          xlabels: [],
+          time_points: [],
+          cluster_dict: {},
+          width: 500,
+          height: 400,
+          margins: {top: 20, right: 50, bottom: 35, left: 50}
+        },
+
+        _elements: {
+          nd: undefined,
+          real_time: undefined,
+          scaled: undefined,
+          time_agnostic_plot: undefined,
+          time_scaled_plot: undefined,
+          plot_1d: undefined,
+          t: undefined,
+          n: undefined,
+          y: undefined
+        },
+
+        _create: function() {
+          let xlabels = this.options.xlabels,
+            time_points = this.options.time_points,
+            cluster_dict = this.options.cluster_dict,
+            width = this.options.width,
+            height = this.options.height,
+            margins = this.options.margins,
+            n_samples = xlabels.length,
+            unscaled_x = [...Array(n_samples).keys()];
+
+          this._elements.nd = xlabels.length > 1;
+          this._elements.real_time = time_points.reduce((a, c, i) => a || !(c===i), false);
+          this._elements.scaled = this._elements.real_time;
+
+          if (this._elements.nd) {
+            let n = d3.scaleLinear()
+              .domain([0, xlabels.length - 1])
+              .range([margins.left, width - margins.right]);
+
+            let y = d3.scaleLinear()
+              .domain([0, 1])
+              .range([height - margins.bottom, margins.top]);
+
+            let yAxis = g => g
+              .attr("transform", "translate(" + margins.left.toString() + " 0)")
+              .call(d3.axisLeft(y));
+
+            let time_agnostic_plot = d3.select(document.createElement("svg"))
+              .attr("baseProfile", "full")
+              .attr("viewBox", "0 0 " + width + " " + height)
+              .attr("version", "1.1")
+              .attr("xmlns", "http://www.w3.org/2000/svg")
+              .attr("xmlns:ev", "http://www.w3.org/2001/xml-events")
+              .attr("xmlns:xlink", "http://www.w3.org/1999/xlink")
+              .attr("overflow", "visible")
+              .attr("onmousemove", "$(\"#clustering-plot\").clustering_plot(\"show_value\", event, this)")
+              .attr("onmouseleave", "$(\"#clustering-plot\").clustering_plot(\"hide_value\", this)")
+              .style("display", this._elements.real_time ? "none" : "block")
+              .style("max-height", "450px");
+            time_agnostic_plot.append("g")
+              .call(g => g
+                .attr("transform", "translate(0 " + (height - margins.bottom) + ")")
+                .call(d3.axisBottom(n).tickValues(unscaled_x).tickFormat(d => xlabels[d]))
+              );
+            time_agnostic_plot.append("g")
+              .call(yAxis);
+            time_agnostic_plot.append("text")
+              .attr("x", (width + margins.left - margins.right) / 2)
+              .attr("y", height - 5)
+              .style("text-anchor", "middle")
+              .attr("font-size", "10px")
+              .text("Samples");
+            time_agnostic_plot.append("text")
+              .attr("transform", "rotate(-90 10 " + ((height + margins.top - margins.bottom) / 2).toString() + ")")
+              .attr("x", 10)
+              .attr("y", (height + margins.top - margins.bottom) / 2)
+              .style("text-anchor", "middle")
+              .attr("font-size", "10px")
+              .text("CCF(x)");
+            for (let clust in cluster_dict) {
+              time_agnostic_plot.append("path")
+                .datum(unscaled_x)
+                .attr("fill", "none")
+                .attr("stroke", cluster_dict[clust].color)
+                .attr("stroke-width", cluster_dict[clust].line_width)
+                .attr("opacity", 0.5)
+                .attr("d", d3.line()
+                  .x(d => n(d))
+                  .y(d => y(cluster_dict[clust].ccf_hat[d])));
+              time_agnostic_plot.append("polygon")
+                .attr("fill", cluster_dict[clust].color)
+                .attr("stroke", "none")
+                .attr("opacity", 0.2)
+                .attr("points", cluster_dict[clust].ccf_high.reduce((a, c, i) => a + n(i) + "," + y(c) + " ", "") +
+                  cluster_dict[clust].ccf_low.reverse().reduce((a, c, i) => a + n(n_samples - i - 1) + "," + y(c) + " ", "")
+                );
+              time_agnostic_plot.append("g").selectAll("circle")
+                .data(unscaled_x)
+                .join("circle")
+                  .attr("fill", cluster_dict[clust].color)
+                  .attr("stroke", "none")
+                  .attr("r", 7)
+                  .attr("opacity", 1.0)
+                  .attr("cx", d => n(d))
+                  .attr("cy", d => y(cluster_dict[clust].ccf_hat[d]))
+            }
+            time_agnostic_plot.append("g")
+              .style("display", "none")
+              .attr("class", "tooltip_");
+
+            this._elements.n = n;
+            this._elements.time_agnostic_plot = time_agnostic_plot.node();
+
+            if (this._elements.real_time) {
+              let t = d3.scaleLinear()
+                .domain([Math.min(...time_points), Math.max(...time_points)])
+                .range([margins.left, width - margins.right]);
+
+              let time_scaled_plot = d3.select(document.createElement("svg"))
+                .attr("baseProfile", "full")
+                .attr("viewBox", "0 0 " + width + " " + height)
+                .attr("version", "1.1")
+                .attr("xmlns", "http://www.w3.org/2000/svg")
+                .attr("xmlns:ev", "http://www.w3.org/2001/xml-events")
+                .attr("xmlns:xlink", "http://www.w3.org/1999/xlink")
+                .attr("overflow", "visible")
+                .attr("onmousemove", "$(\"#clustering-plot\").clustering_plot(\"show_value\", event, this)")
+                .attr("onmouseleave", "$(\"#clustering-plot\").clustering_plot(\"hide_value\", this)")
+                .style("display", "block")
+                .style("max-height", "450px");
+              time_scaled_plot.append("g")
+                .call(g => g
+                  .attr("transform", "translate(0 " + (height - margins.bottom) + ")")
+                  .call(d3.axisBottom(t))
+                );
+              time_scaled_plot.append("g")
+                .call(yAxis);
+              time_scaled_plot.append("text")
+                .attr("x", (width + margins.left - margins.right) / 2)
+                .attr("y", height - 5)
+                .style("text-anchor", "middle")
+                .attr("font-size", "10px")
+                .text("Time");
+              time_scaled_plot.append("text")
+                .attr("transform", "rotate(-90 10 " + ((height + margins.top - margins.bottom) / 2).toString() + ")")
+                .attr("x", 10)
+                .attr("y", (height + margins.top - margins.bottom) / 2)
+                .style("text-anchor", "middle")
+                .attr("font-size", "10px")
+                .text("CCF(x)");
+              for (let clust in cluster_dict) {
+                time_scaled_plot.append("path")
+                  .datum(time_points)
+                  .attr("fill", "none")
+                  .attr("stroke", cluster_dict[clust].color)
+                  .attr("stroke-width", cluster_dict[clust].line_width)
+                  .attr("opacity", 0.5)
+                  .attr("d", d3.line()
+                    .x(d => t(d))
+                    .y((d, i) => y(cluster_dict[clust].ccf_hat[i])));
+                time_scaled_plot.append("polygon")
+                  .attr("fill", cluster_dict[clust].color)
+                  .attr("stroke", "none")
+                  .attr("opacity", 0.2)
+                  .attr("points", cluster_dict[clust].ccf_high.reduce((a, c, i) => a + t(time_points[i]) + "," + y(c) + " ", "") +
+                    cluster_dict[clust].ccf_low.reduce((a, c, i) => a + t(time_points[n_samples - i - 1]) + "," + y(c) + " ", "")
+                  );
+                time_scaled_plot.append("g").selectAll("circle")
+                  .data(time_points)
+                  .join("circle")
+                    .attr("fill", cluster_dict[clust].color)
+                    .attr("stroke", "none")
+                    .attr("r", 7)
+                    .attr("opacity", 1.0)
+                    .attr("cx", d => t(d))
+                    .attr("cy", (d, i) => y(cluster_dict[clust].ccf_hat[i]))
+              }
+              time_scaled_plot.append("g")
+                .style("display", "none")
+                .attr("class", "tooltip_");
+              
+              this._elements.t = t;
+              this._elements.time_scaled_plot = time_scaled_plot.node()
+            }
+            for (let clust in cluster_dict) {
+              cluster_dict[clust].ccf_low.reverse();
+            }
+          } else {
+            let max_bin = 0,
+              n_bins;
+            for (let c in cluster_dict) {
+              max_bin = Math.max(max_bin, ...cluster_dict[c].ccf_dist);
+              n_bins = cluster_dict[c].ccf_dist.length
+            }
+            let x = d3.scaleLinear()
+              .domain([0, 1])
+              .range([margins.left, width - margins.right]);
+
+            let y = d3.scaleLinear()
+              .domain([0, max_bin]).nice()
+              .range([height - margins.bottom, margins.top]);
+
+            let xAxis = g => g
+              .attr("transform", "translate(0 " + (height - margins.bottom).toString() + ")")
+              .call(d3.axisBottom(x));
+
+            let yAxis = g => g
+              .attr("transform", "translate(" + margins.left.toString() + " 0)")
+              .call(d3.axisLeft(y));
+
+            let plot_1d = d3.select(document.createElement("svg"))
+              .attr("baseProfile", "full")
+              .attr("viewBox", "0 0 " + width + " " + height)
+              .attr("version", "1.1")
+              .attr("xmlns", "http://www.w3.org/2000/svg")
+              .attr("xmlns:ev", "http://www.w3.org/2001/xml-events")
+              .attr("xmlns:xlink", "http://www.w3.org/1999/xlink")
+              .attr("style", "max-height: 450px");
+            plot_1d.append("g")
+              .call(xAxis);
+            plot_1d.append("g")
+              .call(yAxis);
+            plot_1d.append("text")
+              .attr("x", (width + margins.left - margins.right) / 2)
+              .attr("y", height - 5)
+              .style("text-anchor", "middle")
+              .attr("font-size", "10px")
+              .text("CCF(x)");
+            plot_1d.append("text")
+              .attr("transform", "rotate(-90 10 " + ((height + margins.top - margins.bottom) / 2).toString() + ")")
+              .attr("x", 10)
+              .attr("y", (height + margins.top - margins.bottom) / 2)
+              .style("text-anchor", "middle")
+              .attr("font-size", "10px")
+              .text("Probability density");
+
+            let zero_str = Array(n_bins).fill(0).reduce(
+              (a, c, i) => a + " " + x((n_bins - i - 1) / (n_bins - 1)).toString() + "," + y(0).toString(), " "
+            );
+
+            plot_1d.selectAll("polygon")
+              .data(Object.keys(cluster_dict))
+              .join("polygon")
+              .attr("points", d =>
+                cluster_dict[d].ccf_dist.reduce(
+                  (a, c, i) => a + " " + x(i / (n_bins - 1)).toString() + "," + y(c).toString(), ""
+                ) + zero_str
+              )
+              .attr("fill", d => cluster_dict[d].color)
+              .attr("opacity", 0.5)
+              .attr("stroke", "none");
+
+            this._elements.plot_1d = plot_1d.node()
+          }
+          
+          this._refresh();
+        },
+
+        _refresh: function() {
+          this.element.context.innerHTML = this._elements.nd ?
+            (this._elements.real_time ? this._elements.time_scaled_plot.outerHTML : "") + this._elements.time_agnostic_plot.outerHTML :
+            this._elements.plot_1d.outerHTML;
+        },
+
+        switch_plot: function() {
+          let display = this._elements.time_agnostic_plot.style.display === "none";
+          this._elements.time_agnostic_plot.style.display = display ? "block" : "none";
+          this._elements.time_scaled_plot.style.display = display ? "none" : "block";
+          this._elements.scaled = !this._elements.scaled;
+
+          this._refresh();
+        },
+
+        show_value: function(eve, plot) {
+          let {width, height} = plot.getBoundingClientRect(),
+            mouse_pos_x = eve.layerX * this.options.width / width,
+            mouse_pos_y = eve.layerY * this.options.height / height,
+            cluster_dict = this.options.cluster_dict,
+            xlabels = this.options.xlabels,
+            time_points = this.options.time_points,
+            tooltip = d3.select(plot).select(".tooltip_"),
+            x,
+            n;
+
+          if (this._elements.scaled) {
+            let scale_x = this._elements.t,
+              x_s = scale_x.invert(mouse_pos_x),
+              t = time_points.reduce((a, c) => (Math.abs(c - x_s) < Math.abs(a - x_s) ? c : a));
+            n = time_points.indexOf(t);
+            x = scale_x(t);
+          } else {
+            let scale_x = this._elements.n;
+            n = Math.round(scale_x.invert(mouse_pos_x));
+            x = scale_x(n);
+          }
+
+          tooltip
+            .attr("style", "display: block;")
+            .attr("transform", "translate(" + x + "," + mouse_pos_y + ")");
+
+          let border = tooltip.selectAll("path")
+            .data([null])
+            .join("path")
+              .attr("fill", "white")
+              .attr("stroke", "black");
+
+          let text_el = tooltip.selectAll("text")
+            .data([null])
+            .attr("font-size", "9px")
+            .join("text")
+            .call(t => t
+              .selectAll("tspan")
+              .data([xlabels[n], ...Object.keys(cluster_dict)])
+              .join("tspan")
+                .attr("x", 0)
+                .attr("y", (d, i) => (i * 1.1) + "em")
+                .style("font-weight", (d, i) => i ? null : "bold")
+                .style("fill", (d, i) => i ? cluster_dict[d].color : "black")
+                .text((d, i) => i ? cluster_dict[d].ccf_hat[n] + " (" + cluster_dict[d].ccf_low[n] + "-" +
+                  cluster_dict[d].ccf_high[n] + ")" : d)
+            );
+
+          let {y, width: w, height: h} = text_el.node().getBBox();
+
+          text_el.attr("transform", "translate(" + (-w / 2) + "," + (15 - y) + ")");
+          border.attr("d", "M" + (-w / 2 - 10) + ",5H-5l5,-5l5,5H" +
+            (w / 2 + 10) + "v" + (h + 20) +
+            "h-" + (w + 20) + "z");
+        },
+
+        hide_value: function(plot) {
+          d3.select(plot).select(".tooltip_").style("display", "none")
+        },
+
+        download: function() {
+          let dl_link;
+          if (this._elements.scaled) {
+            let time_scaled_plot = this._elements.time_scaled_plot.cloneNode(true);
+            time_scaled_plot.removeAttribute("onmousemove");
+            time_scaled_plot.removeAttribute("onmouseleave");
+            dl_link = "data:text/plain;charset=utf-8," + encodeURIComponent(time_scaled_plot.outerHTML);
+          } else if (this._elements.nd) {
+            let time_agnostic_plot = this._elements.time_agnostic_plot.cloneNode(true);
+            time_agnostic_plot.removeAttribute("onmousemove");
+            time_agnostic_plot.removeAttribute("onmouseleave");
+            dl_link = "data:text/plain;charset=utf-8," + encodeURIComponent(time_agnostic_plot.outerHTML);
+          } else {
+            dl_link = "data:text/plain;charset=utf-8," + encodeURIComponent(this._elements.plot_1d.outerHTML);
+          }
+          let dl = document.createElement("a");
+          document.body.appendChild(dl);
+          dl.setAttribute("href", dl_link);
+          dl.setAttribute("download", "patient1" + ".clustering_plot.svg");
+          dl.click();
+        },
+
+        _destroy: function() {
+          this.element.context.innerHTML = "";
+        }
+
+      });
+
+      $("#clustering-plot").clustering_plot({"cluster_dict": {"1": {"ccf_hat": [1.0, 1.0, 1.0], "tumor_abundance": [1.0, 1.0, 1.0], "ccf_high": [1.0, 1.0, 1.0], "color": "rgb(39,140,24)", "drivers": ["MTOR_None"], "ccf_low": [1.0, 1.0, 1.0], "muts": {"C19orf57_None": {"ref_cnt": ["102", "111", "120"], "ccf_hat": [0.92, 0.93, 0.92], "alt_cnt": ["39", "30", "52"], "chrom": "19", "pos": "14000618"}, "TREX2_None": {"ref_cnt": ["84", "89", "53"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["67", "44", "80"], "chrom": "23", "pos": "152710812"}, "MORF4L1_None": {"ref_cnt": ["76", "91", "63"], "ccf_hat": [0.98, 0.96, 0.98], "alt_cnt": ["42", "28", "56"], "chrom": "15", "pos": "79184620"}, "FMNL3_None": {"ref_cnt": ["76", "97", "68"], "ccf_hat": [0.98, 0.91, 0.96], "alt_cnt": ["45", "24", "53"], "chrom": "12", "pos": "50042824"}, "RP11-144G6.4_None": {"ref_cnt": ["74", "87", "63"], "ccf_hat": [0.98, 0.97, 0.98], "alt_cnt": ["46", "32", "57"], "chrom": "10", "pos": "47192168"}, "NHSL2_None": {"ref_cnt": ["109", "104", "85"], "ccf_hat": [0.93, 0.94, 0.99], "alt_cnt": ["42", "29", "68"], "chrom": "23", "pos": "71358975"}, "FREM2_None": {"ref_cnt": ["82", "101", "69"], "ccf_hat": [0.94, 0.71, 0.99], "alt_cnt": ["37", "18", "91"], "chrom": "13", "pos": "39424226"}, "CACNA1H_None": {"ref_cnt": ["37", "64", "18"], "ccf_hat": [0.98, 0.97, 0.94], "alt_cnt": ["42", "29", "48"], "chrom": "16", "pos": "1267980"}, "TCEAL7_None": {"ref_cnt": ["107", "104", "72"], "ccf_hat": [0.95, 0.94, 0.98], "alt_cnt": ["43", "29", "60"], "chrom": "23", "pos": "102586451"}, "CBFA2T2_None": {"ref_cnt": ["85", "99", "62"], "ccf_hat": [0.91, 0.8, 0.98], "alt_cnt": ["35", "20", "58"], "chrom": "20", "pos": "32232338"}, "MTOR_None": {"ref_cnt": ["32", "59", "16"], "ccf_hat": [0.98, 0.98, 0.96], "alt_cnt": ["47", "34", "50"], "chrom": "1", "pos": "11190680"}, "SNX29P2_None": {"ref_cnt": ["36", "70", "12"], "ccf_hat": [0.98, 0.95, 0.98], "alt_cnt": ["42", "23", "54"], "chrom": "16", "pos": "29393068"}, "METTL2A_None": {"ref_cnt": ["87", "93", "73"], "ccf_hat": [0.85, 0.94, 0.92], "alt_cnt": ["32", "26", "47"], "chrom": "17", "pos": "60501595"}, "GPR133_None": {"ref_cnt": ["77", "97", "63"], "ccf_hat": [0.95, 0.6, 0.92], "alt_cnt": ["38", "15", "48"], "chrom": "12", "pos": "131620700"}, "TRO_None": {"ref_cnt": ["85", "84", "88"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["66", "49", "65"], "chrom": "23", "pos": "54949804"}}, "line_width": 7.0, "cnvs": {}}, "2": {"ccf_hat": [1.0, 1.0, 0.23], "tumor_abundance": [0.99, 0.99, 0.0], "ccf_high": [1.0, 1.0, 0.28], "color": "rgb(103,200,243)", "drivers": [], "ccf_low": [1.0, 1.0, 0.21], "muts": {"L3MBTL1_None": {"ref_cnt": ["114", "117", "114"], "ccf_hat": [0.98, 0.92, 0.34], "alt_cnt": ["50", "28", "19"], "chrom": "20", "pos": "42143973"}, "CACNA1C_None": {"ref_cnt": ["82", "92", "108"], "ccf_hat": [0.95, 0.96, 0.25], "alt_cnt": ["38", "28", "12"], "chrom": "12", "pos": "2224416"}, "CLCN3_None": {"ref_cnt": ["80", "90", "106"], "ccf_hat": [0.97, 0.97, 0.31], "alt_cnt": ["40", "30", "15"], "chrom": "4", "pos": "170618648"}, "DNAH9_None": {"ref_cnt": ["79", "93", "104"], "ccf_hat": [0.97, 0.96, 0.35], "alt_cnt": ["41", "28", "17"], "chrom": "17", "pos": "11786979"}, "TEAD2_None": {"ref_cnt": ["112", "120", "158"], "ccf_hat": [0.74, 0.73, 0.28], "alt_cnt": ["29", "19", "14"], "chrom": "19", "pos": "49846623"}, "SNAP25-AS1_None": {"ref_cnt": ["84", "99", "111"], "ccf_hat": [0.92, 0.86, 0.19], "alt_cnt": ["36", "22", "10"], "chrom": "20", "pos": "10258368"}, "ADAM12_None": {"ref_cnt": ["74", "96", "108"], "ccf_hat": [0.98, 0.92, 0.25], "alt_cnt": ["46", "25", "12"], "chrom": "10", "pos": "127806625"}, "GABRA4_None": {"ref_cnt": ["80", "96", "105"], "ccf_hat": [0.95, 0.91, 0.3], "alt_cnt": ["38", "24", "14"], "chrom": "4", "pos": "46994934"}, "LZTS2_None": {"ref_cnt": ["77", "92", "105"], "ccf_hat": [0.98, 0.96, 0.32], "alt_cnt": ["43", "28", "15"], "chrom": "10", "pos": "102766269"}, "RANBP6_None": {"ref_cnt": ["87", "97", "101"], "ccf_hat": [0.86, 0.89, 0.4], "alt_cnt": ["33", "23", "19"], "chrom": "9", "pos": "6014284"}, "RGS20_None": {"ref_cnt": ["78", "95", "69"], "ccf_hat": [0.98, 0.94, 0.25], "alt_cnt": ["42", "26", "11"], "chrom": "8", "pos": "54764473"}, "CPNE8_None": {"ref_cnt": ["68", "89", "115"], "ccf_hat": [0.99, 0.97, 0.1], "alt_cnt": ["52", "30", "6"], "chrom": "12", "pos": "39047810"}, "DPH2_None": {"ref_cnt": ["46", "76", "55"], "ccf_hat": [0.81, 0.87, 0.27], "alt_cnt": ["32", "17", "11"], "chrom": "1", "pos": "44436272"}, "ZNF675_None": {"ref_cnt": ["104", "115", "161"], "ccf_hat": [0.91, 0.85, 0.22], "alt_cnt": ["38", "25", "11"], "chrom": "19", "pos": "23837467"}, "TROAP_None": {"ref_cnt": ["83", "98", "109"], "ccf_hat": [0.95, 0.9, 0.22], "alt_cnt": ["38", "24", "11"], "chrom": "12", "pos": "49723678"}, "FN1_None": {"ref_cnt": ["81", "95", "79"], "ccf_hat": [0.95, 0.9, 0.24], "alt_cnt": ["38", "23", "21"], "chrom": "2", "pos": "216279555"}, "CNTD1_None": {"ref_cnt": ["83", "92", "106"], "ccf_hat": [0.94, 0.96, 0.3], "alt_cnt": ["37", "28", "14"], "chrom": "17", "pos": "40958783"}}, "line_width": 8.0, "cnvs": {}}, "3": {"ccf_hat": [0.68, 0.4, 0.09], "tumor_abundance": [0.69, 0.43, 0.0], "ccf_high": [0.69, 0.43, 0.09], "color": "rgb(248,139,16)", "drivers": [], "ccf_low": [0.67, 0.37, 0.09], "muts": {"PCNXL2_None": {"ref_cnt": ["46", "85", "56"], "ccf_hat": [0.81, 0.41, 0.24], "alt_cnt": ["32", "8", "10"], "chrom": "1", "pos": "233394701"}, "PIPOX_None": {"ref_cnt": ["97", "112", "115"], "ccf_hat": [0.61, 0.38, 0.08], "alt_cnt": ["21", "8", "4"], "chrom": "17", "pos": "27372016"}, "FRRS1L_None": {"ref_cnt": ["128", "138", "166"], "ccf_hat": [0.86, 0.32, 0.19], "alt_cnt": ["35", "7", "10"], "chrom": "9", "pos": "111903657"}, "MPRIP_None": {"ref_cnt": ["101", "116", "119"], "ccf_hat": [0.57, 0.27, 0.04], "alt_cnt": ["20", "5", "1"], "chrom": "17", "pos": "17050651"}, "EMX2_None": {"ref_cnt": ["88", "111", "107"], "ccf_hat": [0.84, 0.41, 0.27], "alt_cnt": ["32", "9", "13"], "chrom": "10", "pos": "119307662"}, "GK2_None": {"ref_cnt": ["88", "109", "106"], "ccf_hat": [0.84, 0.47, 0.3], "alt_cnt": ["32", "11", "14"], "chrom": "4", "pos": "80328130"}, "DNAJC13_None": {"ref_cnt": ["57", "82", "61"], "ccf_hat": [0.67, 0.49, 0.09], "alt_cnt": ["22", "10", "5"], "chrom": "3", "pos": "132176120"}, "USP15_None": {"ref_cnt": ["93", "113", "107"], "ccf_hat": [0.75, 0.41, 0.27], "alt_cnt": ["28", "9", "13"], "chrom": "12", "pos": "62743075"}, "FBP2_None": {"ref_cnt": ["146", "143", "174"], "ccf_hat": [0.35, 0.27, 0.04], "alt_cnt": ["15", "6", "1"], "chrom": "9", "pos": "97333853"}, "BOP1_None": {"ref_cnt": ["103", "106", "75"], "ccf_hat": [0.43, 0.52, 0.07], "alt_cnt": ["16", "13", "4"], "chrom": "8", "pos": "145515007"}, "CDC7_None": {"ref_cnt": ["63", "88", "60"], "ccf_hat": [0.51, 0.29, 0.11], "alt_cnt": ["16", "5", "6"], "chrom": "1", "pos": "91978846"}, "SLC22A13_None": {"ref_cnt": ["58", "88", "64"], "ccf_hat": [0.66, 0.29, 0.05], "alt_cnt": ["21", "5", "2"], "chrom": "3", "pos": "38318557"}, "ZSCAN20_None": {"ref_cnt": ["43", "82", "58"], "ccf_hat": [0.9, 0.54, 0.18], "alt_cnt": ["35", "11", "8"], "chrom": "1", "pos": "33945050"}, "LZIC_None": {"ref_cnt": ["61", "86", "65"], "ccf_hat": [0.56, 0.41, 0.04], "alt_cnt": ["17", "8", "1"], "chrom": "1", "pos": "9996650"}, "SORCS1_None": {"ref_cnt": ["84", "105", "114"], "ccf_hat": [0.93, 0.54, 0.11], "alt_cnt": ["37", "14", "7"], "chrom": "10", "pos": "108338950"}}, "line_width": 7.0, "cnvs": {}}, "4": {"ccf_hat": [0.01, 0.01, 1.0], "tumor_abundance": [0.01, 0.01, 1.0], "ccf_high": [0.01, 0.01, 1.0], "color": "rgb(16,49,41)", "drivers": ["TP53_None"], "ccf_low": [0.01, 0.01, 1.0], "muts": {"C3_None": {"ref_cnt": ["142", "139", "130"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "43"], "chrom": "19", "pos": "6714393"}, "MBTPS2_None": {"ref_cnt": ["151", "133", "110"], "ccf_hat": [0.02, 0.04, 0.78], "alt_cnt": ["0", "0", "43"], "chrom": "23", "pos": "21875555"}, "RP11-766F14.2_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "4", "pos": "100572683"}, "NEDD4L_None": {"ref_cnt": ["160", "146", "86"], "ccf_hat": [0.02, 0.04, 0.9], "alt_cnt": ["0", "0", "46"], "chrom": "18", "pos": "55997995"}, "TP53_None": {"ref_cnt": ["120", "118", "81"], "ccf_hat": [0.02, 0.04, 0.77], "alt_cnt": ["0", "0", "38"], "chrom": "17", "pos": "7578190"}, "USP43_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "17", "pos": "9603498"}, "BICC1_None": {"ref_cnt": ["118", "122", "79"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "41"], "chrom": "10", "pos": "60549075"}, "TLN2_None": {"ref_cnt": ["120", "120", "74"], "ccf_hat": [0.02, 0.04, 0.91], "alt_cnt": ["0", "0", "46"], "chrom": "15", "pos": "63112738"}, "SLC22A12_None": {"ref_cnt": ["79", "92", "30"], "ccf_hat": [0.03, 0.05, 0.75], "alt_cnt": ["0", "0", "35"], "chrom": "11", "pos": "64366049"}, "DOCK9_None": {"ref_cnt": ["119", "120", "83"], "ccf_hat": [0.02, 0.04, 0.99], "alt_cnt": ["0", "0", "76"], "chrom": "13", "pos": "99515321"}, "OR2L13_None": {"ref_cnt": ["78", "93", "23"], "ccf_hat": [0.03, 0.05, 0.87], "alt_cnt": ["0", "0", "43"], "chrom": "1", "pos": "248185331"}}, "line_width": 5.0, "cnvs": {}}, "5": {"ccf_hat": [0.14, 0.32, 0.2], "tumor_abundance": [0.14, 0.3, 0.0], "ccf_high": [0.17, 0.37, 0.34], "color": "rgb(93,119,254)", "drivers": ["MED23_None"], "ccf_low": [0.12, 0.27, 0.09], "muts": {"PATL2_None": {"ref_cnt": ["112", "116", "111"], "ccf_hat": [0.21, 0.27, 0.16], "alt_cnt": ["7", "5", "9"], "chrom": "15", "pos": "44965480"}, "TOP3A_None": {"ref_cnt": ["117", "113", "104"], "ccf_hat": [0.11, 0.35, 0.32], "alt_cnt": ["3", "7", "15"], "chrom": "17", "pos": "18218028"}, "SMIM20_None": {"ref_cnt": ["114", "110", "110"], "ccf_hat": [0.21, 0.38, 0.14], "alt_cnt": ["7", "8", "8"], "chrom": "4", "pos": "25916019"}, "TNC_None": {"ref_cnt": ["156", "141", "169"], "ccf_hat": [0.18, 0.31, 0.14], "alt_cnt": ["6", "7", "8"], "chrom": "9", "pos": "117825247"}, "SALL4_None": {"ref_cnt": ["112", "112", "109"], "ccf_hat": [0.23, 0.35, 0.22], "alt_cnt": ["8", "7", "11"], "chrom": "20", "pos": "50400965"}, "BAAT_None": {"ref_cnt": ["156", "137", "162"], "ccf_hat": [0.18, 0.42, 0.24], "alt_cnt": ["6", "11", "12"], "chrom": "9", "pos": "104133603"}, "TMEM184B_None": {"ref_cnt": ["73", "85", "53"], "ccf_hat": [0.19, 0.41, 0.31], "alt_cnt": ["5", "8", "13"], "chrom": "22", "pos": "38642056"}, "OR4E2_None": {"ref_cnt": ["119", "111", "112"], "ccf_hat": [0.06, 0.41, 0.13], "alt_cnt": ["1", "9", "8"], "chrom": "14", "pos": "22133786"}, "MARK3_None": {"ref_cnt": ["161", "142", "166"], "ccf_hat": [0.1, 0.16, 0.16], "alt_cnt": ["3", "3", "9"], "chrom": "14", "pos": "103934398"}, "MAP4_None": {"ref_cnt": ["75", "88", "53"], "ccf_hat": [0.13, 0.29, 0.31], "alt_cnt": ["3", "5", "13"], "chrom": "3", "pos": "47933834"}, "RP11-983P16.4_None": {"ref_cnt": ["113", "111", "110"], "ccf_hat": [0.21, 0.35, 0.19], "alt_cnt": ["7", "7", "10"], "chrom": "12", "pos": "53448131"}, "RAB11FIP5_None": {"ref_cnt": ["116", "118", "86"], "ccf_hat": [0.11, 0.14, 0.2], "alt_cnt": ["3", "2", "14"], "chrom": "2", "pos": "73308135"}, "MED23_None": {"ref_cnt": ["96", "106", "108"], "ccf_hat": [0.09, 0.42, 0.15], "alt_cnt": ["3", "9", "8"], "chrom": "6", "pos": "131908818"}}, "line_width": 6.0, "cnvs": {}}, "6": {"ccf_hat": [0.01, 0.01, 0.44], "tumor_abundance": [0.01, 0.01, 0.43], "ccf_high": [0.01, 0.01, 0.47], "color": "rgb(152,22,26)", "drivers": [], "ccf_low": [0.01, 0.01, 0.4], "muts": {"FGD2_None": {"ref_cnt": ["100", "114", "98"], "ccf_hat": [0.01, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "6", "pos": "36993628"}, "ARHGAP21_None": {"ref_cnt": ["120", "120", "91"], "ccf_hat": [0.02, 0.04, 0.6], "alt_cnt": ["0", "0", "29"], "chrom": "10", "pos": "24923955"}, "LIN9_None": {"ref_cnt": ["79", "92", "42"], "ccf_hat": [0.03, 0.05, 0.56], "alt_cnt": ["0", "0", "24"], "chrom": "1", "pos": "226488883"}, "IFNA2_None": {"ref_cnt": ["120", "120", "105"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "15"], "chrom": "9", "pos": "21385148"}, "SYTL1_None": {"ref_cnt": ["78", "94", "45"], "ccf_hat": [0.03, 0.05, 0.51], "alt_cnt": ["0", "0", "22"], "chrom": "1", "pos": "27677959"}, "NRAP_None": {"ref_cnt": ["120", "121", "104"], "ccf_hat": [0.02, 0.04, 0.34], "alt_cnt": ["0", "0", "16"], "chrom": "10", "pos": "115356883"}, "PYROXD2_None": {"ref_cnt": ["119", "121", "100"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "10", "pos": "100174813"}, "MTR_None": {"ref_cnt": ["77", "93", "46"], "ccf_hat": [0.03, 0.05, 0.49], "alt_cnt": ["0", "0", "21"], "chrom": "1", "pos": "236998929"}, "CCDC159_None": {"ref_cnt": ["140", "140", "148"], "ccf_hat": [0.02, 0.04, 0.47], "alt_cnt": ["0", "0", "24"], "chrom": "19", "pos": "11461587"}, "TNFAIP2_None": {"ref_cnt": ["161", "145", "154"], "ccf_hat": [0.02, 0.04, 0.38], "alt_cnt": ["0", "0", "19"], "chrom": "14", "pos": "103599771"}, "CHST10_None": {"ref_cnt": ["120", "120", "77"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "23"], "chrom": "2", "pos": "101009835"}, "EIF2AK2_None": {"ref_cnt": ["119", "120", "80"], "ccf_hat": [0.02, 0.04, 0.22], "alt_cnt": ["0", "0", "20"], "chrom": "2", "pos": "37374908"}, "NCKAP1L_None": {"ref_cnt": ["120", "121", "92"], "ccf_hat": [0.02, 0.04, 0.58], "alt_cnt": ["0", "0", "28"], "chrom": "12", "pos": "54913049"}, "ZNF543_None": {"ref_cnt": ["141", "141", "151"], "ccf_hat": [0.02, 0.04, 0.4], "alt_cnt": ["0", "0", "20"], "chrom": "19", "pos": "57839590"}, "SPTB_None": {"ref_cnt": ["163", "146", "156"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "16"], "chrom": "14", "pos": "65249071"}}, "line_width": 7.0, "cnvs": {}}}, "xlabels": ["T0", "T1", "T2"], "time_points": [50.0, 100.0, 120.0]})
+    });
+  </script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.time_switch", {
+
+        options: {show: true},
+
+        _elements: {time_switch: undefined, input: undefined},
+
+        _create: function() {
+          if (this.options.show) {
+            let time_switch = d3.select(document.createElement("label"))
+              .html("Time-scaled");
+            this._elements.input = time_switch.append("input")
+              .attr("type", "checkbox")
+              .attr("checked", "")
+              .attr("onclick", "$(\"#time-switch\").time_switch(\"switch_plot\")")
+              .node();
+
+            this._elements.time_switch = time_switch.node();
+
+            this._refresh()
+
+          }
+        },
+
+        _refresh: function() {
+          this.element.context.innerHTML = this._elements.time_switch.outerHTML;
+        },
+
+        is_checked: function() {
+          if (this.options.show) {
+            return this._elements.input.hasAttribute("checked")
+          }
+          return true
+        },
+
+        switch_plot: function() {
+          if (this.is_checked()) {
+            this._elements.input.removeAttribute("checked");
+          } else {
+            this._elements.input.setAttribute("checked", "");
+          }
+          $("#clustering-plot").clustering_plot("switch_plot");
+
+          this._refresh();
+        }
+
+      });
+
+      $("#time-switch").time_switch({"show": true})
+    });
+  </script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.cluster_switches", {
+        options: {
+          cluster_dict: {},
+          time_points: [],
+          xlabels: [],
+          tumor_sizes: {},
+          child_dict: {}
+        },
+
+        _elements: {
+          active_clusters: [],
+          svg_switches: undefined
+        },
+
+        _create: function() {
+          let cluster_dict = this.options.cluster_dict,
+            svg_layout = d3.select(document.createElement("svg"))
+              .attr("baseProfile", "full")
+              .attr("version", "1.1")
+              .attr("xmlns", "http://www.w3.org/2000/svg")
+              .attr("xmlns:ev", "http://www.w3.org/2001/xml-events")
+              .attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
+          for (let c in cluster_dict) {
+            this._elements.active_clusters.push(c);
+          }
+          svg_layout.attr("viewBox", "0 0 120 " + ((this._elements.active_clusters.length + 2) * 30));
+          svg_layout.selectAll("rect")
+            .data(this._elements.active_clusters)
+            .join("rect")
+            .attr("class", "active-cluster")
+            .attr("style", "cursor: pointer;")
+            .attr("cluster", (_, i) => i + 1)
+            .attr("x", 0)
+            .attr("y", (_, i) => i * 30 + 30)
+            .attr("width", 20)
+            .attr("height", 20)
+            .attr("fill", d => cluster_dict[d].color)
+            .attr("stroke", "none")
+            .attr("opacity", 0.8)
+            .attr("onclick", "$(\"#cluster-switches\").cluster_switches(\"toggle_cluster\", this)");
+          svg_layout.selectAll("text")
+            .data(this._elements.active_clusters)
+            .join("text")
+            .attr("x", 30)
+            .attr("y", (_, i) => i * 30 + 45)
+            .attr("fill", d => cluster_dict[d].color)
+            .text(d => d + " (" + Object.keys(cluster_dict[d].muts).length.toString() + ")");
+          svg_layout.append("text")
+            .attr("x", 0)
+            .attr("y", 15)
+            .attr("font-size", "11.5px")
+            .text("Cluster (# variants)");
+
+          this._elements.svg_switches = svg_layout.node();
+
+          this._refresh();
+        },
+
+        _refresh: function() {
+          this.element.context.innerHTML = this._elements.svg_switches.outerHTML;
+        },
+
+        toggle_cluster: function(cluster_switch) {
+          let c = cluster_switch.getAttribute("cluster"),
+            cluster_dict = this.options.cluster_dict,
+            child_dict = this.options.child_dict,
+            active_clusters = this._elements.active_clusters,
+            cluster_dict_subset = {},
+            altered_child_dict = {};
+          if (cluster_switch.getAttribute("class") === "active-cluster") {
+            cluster_switch.setAttribute("class", "removed-cluster");
+            for (let i in active_clusters) {
+              if (active_clusters[i] === c) {
+                active_clusters.splice(i, 1);
+                break;
+              }
+            }
+          } else {
+            cluster_switch.setAttribute("class", "active-cluster");
+            active_clusters.push(c);
+          }
+
+          let get_new_children = function(cluster) {
+            let children = [];
+            for (let i in child_dict[cluster]) {
+              if (active_clusters.includes(child_dict[cluster][i].toString())) {
+                children.push(child_dict[cluster][i])
+              } else {
+                children.push(...get_new_children(child_dict[cluster][i]))
+              }
+            }
+            return children
+          };
+
+          for (let i in active_clusters) {
+            let active_cluster = active_clusters[i];
+            cluster_dict_subset[active_cluster] = cluster_dict[active_cluster];
+            if (child_dict) {
+              altered_child_dict[active_cluster] = get_new_children(active_cluster)
+            }
+          }
+          if (child_dict) {
+            altered_child_dict[null] = get_new_children(null);
+          }
+
+          let clustering_plot = $("#clustering-plot");
+          clustering_plot.clustering_plot("destroy");
+          clustering_plot.clustering_plot({
+            xlabels: this.options.xlabels,
+            time_points: this.options.time_points,
+            cluster_dict: cluster_dict_subset});
+          if (!$("#time-switch").time_switch("is_checked")) {
+            clustering_plot.clustering_plot("switch_plot");
+          }
+
+          let mutation_plot = $("#mutation-plot");
+          mutation_plot.mutation_plot("destroy");
+          mutation_plot.mutation_plot({
+            xlabels: this.options.xlabels,
+            cluster_dict: cluster_dict_subset});
+
+          if (child_dict) {
+            let fish_plot = $("#fish-plot");
+            fish_plot.fish_plot("destroy");
+            fish_plot.fish_plot({
+              xlabels: this.options.xlabels,
+              time_points: this.options.time_points,
+              tumor_sizes: this.options.tumor_sizes,
+              cluster_dict: cluster_dict_subset,
+              child_dict: altered_child_dict
+            })
+          }
+        }
+      });
+
+      $("#cluster-switches").cluster_switches({"cluster_dict": {"1": {"ccf_hat": [1.0, 1.0, 1.0], "tumor_abundance": [1.0, 1.0, 1.0], "ccf_high": [1.0, 1.0, 1.0], "color": "rgb(39,140,24)", "drivers": ["MTOR_None"], "ccf_low": [1.0, 1.0, 1.0], "muts": {"C19orf57_None": {"ref_cnt": ["102", "111", "120"], "ccf_hat": [0.92, 0.93, 0.92], "alt_cnt": ["39", "30", "52"], "chrom": "19", "pos": "14000618"}, "TREX2_None": {"ref_cnt": ["84", "89", "53"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["67", "44", "80"], "chrom": "23", "pos": "152710812"}, "MORF4L1_None": {"ref_cnt": ["76", "91", "63"], "ccf_hat": [0.98, 0.96, 0.98], "alt_cnt": ["42", "28", "56"], "chrom": "15", "pos": "79184620"}, "FMNL3_None": {"ref_cnt": ["76", "97", "68"], "ccf_hat": [0.98, 0.91, 0.96], "alt_cnt": ["45", "24", "53"], "chrom": "12", "pos": "50042824"}, "RP11-144G6.4_None": {"ref_cnt": ["74", "87", "63"], "ccf_hat": [0.98, 0.97, 0.98], "alt_cnt": ["46", "32", "57"], "chrom": "10", "pos": "47192168"}, "NHSL2_None": {"ref_cnt": ["109", "104", "85"], "ccf_hat": [0.93, 0.94, 0.99], "alt_cnt": ["42", "29", "68"], "chrom": "23", "pos": "71358975"}, "FREM2_None": {"ref_cnt": ["82", "101", "69"], "ccf_hat": [0.94, 0.71, 0.99], "alt_cnt": ["37", "18", "91"], "chrom": "13", "pos": "39424226"}, "CACNA1H_None": {"ref_cnt": ["37", "64", "18"], "ccf_hat": [0.98, 0.97, 0.94], "alt_cnt": ["42", "29", "48"], "chrom": "16", "pos": "1267980"}, "TCEAL7_None": {"ref_cnt": ["107", "104", "72"], "ccf_hat": [0.95, 0.94, 0.98], "alt_cnt": ["43", "29", "60"], "chrom": "23", "pos": "102586451"}, "CBFA2T2_None": {"ref_cnt": ["85", "99", "62"], "ccf_hat": [0.91, 0.8, 0.98], "alt_cnt": ["35", "20", "58"], "chrom": "20", "pos": "32232338"}, "MTOR_None": {"ref_cnt": ["32", "59", "16"], "ccf_hat": [0.98, 0.98, 0.96], "alt_cnt": ["47", "34", "50"], "chrom": "1", "pos": "11190680"}, "SNX29P2_None": {"ref_cnt": ["36", "70", "12"], "ccf_hat": [0.98, 0.95, 0.98], "alt_cnt": ["42", "23", "54"], "chrom": "16", "pos": "29393068"}, "METTL2A_None": {"ref_cnt": ["87", "93", "73"], "ccf_hat": [0.85, 0.94, 0.92], "alt_cnt": ["32", "26", "47"], "chrom": "17", "pos": "60501595"}, "GPR133_None": {"ref_cnt": ["77", "97", "63"], "ccf_hat": [0.95, 0.6, 0.92], "alt_cnt": ["38", "15", "48"], "chrom": "12", "pos": "131620700"}, "TRO_None": {"ref_cnt": ["85", "84", "88"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["66", "49", "65"], "chrom": "23", "pos": "54949804"}}, "line_width": 7.0, "cnvs": {}}, "2": {"ccf_hat": [1.0, 1.0, 0.23], "tumor_abundance": [0.99, 0.99, 0.0], "ccf_high": [1.0, 1.0, 0.28], "color": "rgb(103,200,243)", "drivers": [], "ccf_low": [1.0, 1.0, 0.21], "muts": {"L3MBTL1_None": {"ref_cnt": ["114", "117", "114"], "ccf_hat": [0.98, 0.92, 0.34], "alt_cnt": ["50", "28", "19"], "chrom": "20", "pos": "42143973"}, "CACNA1C_None": {"ref_cnt": ["82", "92", "108"], "ccf_hat": [0.95, 0.96, 0.25], "alt_cnt": ["38", "28", "12"], "chrom": "12", "pos": "2224416"}, "CLCN3_None": {"ref_cnt": ["80", "90", "106"], "ccf_hat": [0.97, 0.97, 0.31], "alt_cnt": ["40", "30", "15"], "chrom": "4", "pos": "170618648"}, "DNAH9_None": {"ref_cnt": ["79", "93", "104"], "ccf_hat": [0.97, 0.96, 0.35], "alt_cnt": ["41", "28", "17"], "chrom": "17", "pos": "11786979"}, "TEAD2_None": {"ref_cnt": ["112", "120", "158"], "ccf_hat": [0.74, 0.73, 0.28], "alt_cnt": ["29", "19", "14"], "chrom": "19", "pos": "49846623"}, "SNAP25-AS1_None": {"ref_cnt": ["84", "99", "111"], "ccf_hat": [0.92, 0.86, 0.19], "alt_cnt": ["36", "22", "10"], "chrom": "20", "pos": "10258368"}, "ADAM12_None": {"ref_cnt": ["74", "96", "108"], "ccf_hat": [0.98, 0.92, 0.25], "alt_cnt": ["46", "25", "12"], "chrom": "10", "pos": "127806625"}, "GABRA4_None": {"ref_cnt": ["80", "96", "105"], "ccf_hat": [0.95, 0.91, 0.3], "alt_cnt": ["38", "24", "14"], "chrom": "4", "pos": "46994934"}, "LZTS2_None": {"ref_cnt": ["77", "92", "105"], "ccf_hat": [0.98, 0.96, 0.32], "alt_cnt": ["43", "28", "15"], "chrom": "10", "pos": "102766269"}, "RANBP6_None": {"ref_cnt": ["87", "97", "101"], "ccf_hat": [0.86, 0.89, 0.4], "alt_cnt": ["33", "23", "19"], "chrom": "9", "pos": "6014284"}, "RGS20_None": {"ref_cnt": ["78", "95", "69"], "ccf_hat": [0.98, 0.94, 0.25], "alt_cnt": ["42", "26", "11"], "chrom": "8", "pos": "54764473"}, "CPNE8_None": {"ref_cnt": ["68", "89", "115"], "ccf_hat": [0.99, 0.97, 0.1], "alt_cnt": ["52", "30", "6"], "chrom": "12", "pos": "39047810"}, "DPH2_None": {"ref_cnt": ["46", "76", "55"], "ccf_hat": [0.81, 0.87, 0.27], "alt_cnt": ["32", "17", "11"], "chrom": "1", "pos": "44436272"}, "ZNF675_None": {"ref_cnt": ["104", "115", "161"], "ccf_hat": [0.91, 0.85, 0.22], "alt_cnt": ["38", "25", "11"], "chrom": "19", "pos": "23837467"}, "TROAP_None": {"ref_cnt": ["83", "98", "109"], "ccf_hat": [0.95, 0.9, 0.22], "alt_cnt": ["38", "24", "11"], "chrom": "12", "pos": "49723678"}, "FN1_None": {"ref_cnt": ["81", "95", "79"], "ccf_hat": [0.95, 0.9, 0.24], "alt_cnt": ["38", "23", "21"], "chrom": "2", "pos": "216279555"}, "CNTD1_None": {"ref_cnt": ["83", "92", "106"], "ccf_hat": [0.94, 0.96, 0.3], "alt_cnt": ["37", "28", "14"], "chrom": "17", "pos": "40958783"}}, "line_width": 8.0, "cnvs": {}}, "3": {"ccf_hat": [0.68, 0.4, 0.09], "tumor_abundance": [0.69, 0.43, 0.0], "ccf_high": [0.69, 0.43, 0.09], "color": "rgb(248,139,16)", "drivers": [], "ccf_low": [0.67, 0.37, 0.09], "muts": {"PCNXL2_None": {"ref_cnt": ["46", "85", "56"], "ccf_hat": [0.81, 0.41, 0.24], "alt_cnt": ["32", "8", "10"], "chrom": "1", "pos": "233394701"}, "PIPOX_None": {"ref_cnt": ["97", "112", "115"], "ccf_hat": [0.61, 0.38, 0.08], "alt_cnt": ["21", "8", "4"], "chrom": "17", "pos": "27372016"}, "FRRS1L_None": {"ref_cnt": ["128", "138", "166"], "ccf_hat": [0.86, 0.32, 0.19], "alt_cnt": ["35", "7", "10"], "chrom": "9", "pos": "111903657"}, "MPRIP_None": {"ref_cnt": ["101", "116", "119"], "ccf_hat": [0.57, 0.27, 0.04], "alt_cnt": ["20", "5", "1"], "chrom": "17", "pos": "17050651"}, "EMX2_None": {"ref_cnt": ["88", "111", "107"], "ccf_hat": [0.84, 0.41, 0.27], "alt_cnt": ["32", "9", "13"], "chrom": "10", "pos": "119307662"}, "GK2_None": {"ref_cnt": ["88", "109", "106"], "ccf_hat": [0.84, 0.47, 0.3], "alt_cnt": ["32", "11", "14"], "chrom": "4", "pos": "80328130"}, "DNAJC13_None": {"ref_cnt": ["57", "82", "61"], "ccf_hat": [0.67, 0.49, 0.09], "alt_cnt": ["22", "10", "5"], "chrom": "3", "pos": "132176120"}, "USP15_None": {"ref_cnt": ["93", "113", "107"], "ccf_hat": [0.75, 0.41, 0.27], "alt_cnt": ["28", "9", "13"], "chrom": "12", "pos": "62743075"}, "FBP2_None": {"ref_cnt": ["146", "143", "174"], "ccf_hat": [0.35, 0.27, 0.04], "alt_cnt": ["15", "6", "1"], "chrom": "9", "pos": "97333853"}, "BOP1_None": {"ref_cnt": ["103", "106", "75"], "ccf_hat": [0.43, 0.52, 0.07], "alt_cnt": ["16", "13", "4"], "chrom": "8", "pos": "145515007"}, "CDC7_None": {"ref_cnt": ["63", "88", "60"], "ccf_hat": [0.51, 0.29, 0.11], "alt_cnt": ["16", "5", "6"], "chrom": "1", "pos": "91978846"}, "SLC22A13_None": {"ref_cnt": ["58", "88", "64"], "ccf_hat": [0.66, 0.29, 0.05], "alt_cnt": ["21", "5", "2"], "chrom": "3", "pos": "38318557"}, "ZSCAN20_None": {"ref_cnt": ["43", "82", "58"], "ccf_hat": [0.9, 0.54, 0.18], "alt_cnt": ["35", "11", "8"], "chrom": "1", "pos": "33945050"}, "LZIC_None": {"ref_cnt": ["61", "86", "65"], "ccf_hat": [0.56, 0.41, 0.04], "alt_cnt": ["17", "8", "1"], "chrom": "1", "pos": "9996650"}, "SORCS1_None": {"ref_cnt": ["84", "105", "114"], "ccf_hat": [0.93, 0.54, 0.11], "alt_cnt": ["37", "14", "7"], "chrom": "10", "pos": "108338950"}}, "line_width": 7.0, "cnvs": {}}, "4": {"ccf_hat": [0.01, 0.01, 1.0], "tumor_abundance": [0.01, 0.01, 1.0], "ccf_high": [0.01, 0.01, 1.0], "color": "rgb(16,49,41)", "drivers": ["TP53_None"], "ccf_low": [0.01, 0.01, 1.0], "muts": {"C3_None": {"ref_cnt": ["142", "139", "130"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "43"], "chrom": "19", "pos": "6714393"}, "MBTPS2_None": {"ref_cnt": ["151", "133", "110"], "ccf_hat": [0.02, 0.04, 0.78], "alt_cnt": ["0", "0", "43"], "chrom": "23", "pos": "21875555"}, "RP11-766F14.2_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "4", "pos": "100572683"}, "NEDD4L_None": {"ref_cnt": ["160", "146", "86"], "ccf_hat": [0.02, 0.04, 0.9], "alt_cnt": ["0", "0", "46"], "chrom": "18", "pos": "55997995"}, "TP53_None": {"ref_cnt": ["120", "118", "81"], "ccf_hat": [0.02, 0.04, 0.77], "alt_cnt": ["0", "0", "38"], "chrom": "17", "pos": "7578190"}, "USP43_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "17", "pos": "9603498"}, "BICC1_None": {"ref_cnt": ["118", "122", "79"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "41"], "chrom": "10", "pos": "60549075"}, "TLN2_None": {"ref_cnt": ["120", "120", "74"], "ccf_hat": [0.02, 0.04, 0.91], "alt_cnt": ["0", "0", "46"], "chrom": "15", "pos": "63112738"}, "SLC22A12_None": {"ref_cnt": ["79", "92", "30"], "ccf_hat": [0.03, 0.05, 0.75], "alt_cnt": ["0", "0", "35"], "chrom": "11", "pos": "64366049"}, "DOCK9_None": {"ref_cnt": ["119", "120", "83"], "ccf_hat": [0.02, 0.04, 0.99], "alt_cnt": ["0", "0", "76"], "chrom": "13", "pos": "99515321"}, "OR2L13_None": {"ref_cnt": ["78", "93", "23"], "ccf_hat": [0.03, 0.05, 0.87], "alt_cnt": ["0", "0", "43"], "chrom": "1", "pos": "248185331"}}, "line_width": 5.0, "cnvs": {}}, "5": {"ccf_hat": [0.14, 0.32, 0.2], "tumor_abundance": [0.14, 0.3, 0.0], "ccf_high": [0.17, 0.37, 0.34], "color": "rgb(93,119,254)", "drivers": ["MED23_None"], "ccf_low": [0.12, 0.27, 0.09], "muts": {"PATL2_None": {"ref_cnt": ["112", "116", "111"], "ccf_hat": [0.21, 0.27, 0.16], "alt_cnt": ["7", "5", "9"], "chrom": "15", "pos": "44965480"}, "TOP3A_None": {"ref_cnt": ["117", "113", "104"], "ccf_hat": [0.11, 0.35, 0.32], "alt_cnt": ["3", "7", "15"], "chrom": "17", "pos": "18218028"}, "SMIM20_None": {"ref_cnt": ["114", "110", "110"], "ccf_hat": [0.21, 0.38, 0.14], "alt_cnt": ["7", "8", "8"], "chrom": "4", "pos": "25916019"}, "TNC_None": {"ref_cnt": ["156", "141", "169"], "ccf_hat": [0.18, 0.31, 0.14], "alt_cnt": ["6", "7", "8"], "chrom": "9", "pos": "117825247"}, "SALL4_None": {"ref_cnt": ["112", "112", "109"], "ccf_hat": [0.23, 0.35, 0.22], "alt_cnt": ["8", "7", "11"], "chrom": "20", "pos": "50400965"}, "BAAT_None": {"ref_cnt": ["156", "137", "162"], "ccf_hat": [0.18, 0.42, 0.24], "alt_cnt": ["6", "11", "12"], "chrom": "9", "pos": "104133603"}, "TMEM184B_None": {"ref_cnt": ["73", "85", "53"], "ccf_hat": [0.19, 0.41, 0.31], "alt_cnt": ["5", "8", "13"], "chrom": "22", "pos": "38642056"}, "OR4E2_None": {"ref_cnt": ["119", "111", "112"], "ccf_hat": [0.06, 0.41, 0.13], "alt_cnt": ["1", "9", "8"], "chrom": "14", "pos": "22133786"}, "MARK3_None": {"ref_cnt": ["161", "142", "166"], "ccf_hat": [0.1, 0.16, 0.16], "alt_cnt": ["3", "3", "9"], "chrom": "14", "pos": "103934398"}, "MAP4_None": {"ref_cnt": ["75", "88", "53"], "ccf_hat": [0.13, 0.29, 0.31], "alt_cnt": ["3", "5", "13"], "chrom": "3", "pos": "47933834"}, "RP11-983P16.4_None": {"ref_cnt": ["113", "111", "110"], "ccf_hat": [0.21, 0.35, 0.19], "alt_cnt": ["7", "7", "10"], "chrom": "12", "pos": "53448131"}, "RAB11FIP5_None": {"ref_cnt": ["116", "118", "86"], "ccf_hat": [0.11, 0.14, 0.2], "alt_cnt": ["3", "2", "14"], "chrom": "2", "pos": "73308135"}, "MED23_None": {"ref_cnt": ["96", "106", "108"], "ccf_hat": [0.09, 0.42, 0.15], "alt_cnt": ["3", "9", "8"], "chrom": "6", "pos": "131908818"}}, "line_width": 6.0, "cnvs": {}}, "6": {"ccf_hat": [0.01, 0.01, 0.44], "tumor_abundance": [0.01, 0.01, 0.43], "ccf_high": [0.01, 0.01, 0.47], "color": "rgb(152,22,26)", "drivers": [], "ccf_low": [0.01, 0.01, 0.4], "muts": {"FGD2_None": {"ref_cnt": ["100", "114", "98"], "ccf_hat": [0.01, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "6", "pos": "36993628"}, "ARHGAP21_None": {"ref_cnt": ["120", "120", "91"], "ccf_hat": [0.02, 0.04, 0.6], "alt_cnt": ["0", "0", "29"], "chrom": "10", "pos": "24923955"}, "LIN9_None": {"ref_cnt": ["79", "92", "42"], "ccf_hat": [0.03, 0.05, 0.56], "alt_cnt": ["0", "0", "24"], "chrom": "1", "pos": "226488883"}, "IFNA2_None": {"ref_cnt": ["120", "120", "105"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "15"], "chrom": "9", "pos": "21385148"}, "SYTL1_None": {"ref_cnt": ["78", "94", "45"], "ccf_hat": [0.03, 0.05, 0.51], "alt_cnt": ["0", "0", "22"], "chrom": "1", "pos": "27677959"}, "NRAP_None": {"ref_cnt": ["120", "121", "104"], "ccf_hat": [0.02, 0.04, 0.34], "alt_cnt": ["0", "0", "16"], "chrom": "10", "pos": "115356883"}, "PYROXD2_None": {"ref_cnt": ["119", "121", "100"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "10", "pos": "100174813"}, "MTR_None": {"ref_cnt": ["77", "93", "46"], "ccf_hat": [0.03, 0.05, 0.49], "alt_cnt": ["0", "0", "21"], "chrom": "1", "pos": "236998929"}, "CCDC159_None": {"ref_cnt": ["140", "140", "148"], "ccf_hat": [0.02, 0.04, 0.47], "alt_cnt": ["0", "0", "24"], "chrom": "19", "pos": "11461587"}, "TNFAIP2_None": {"ref_cnt": ["161", "145", "154"], "ccf_hat": [0.02, 0.04, 0.38], "alt_cnt": ["0", "0", "19"], "chrom": "14", "pos": "103599771"}, "CHST10_None": {"ref_cnt": ["120", "120", "77"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "23"], "chrom": "2", "pos": "101009835"}, "EIF2AK2_None": {"ref_cnt": ["119", "120", "80"], "ccf_hat": [0.02, 0.04, 0.22], "alt_cnt": ["0", "0", "20"], "chrom": "2", "pos": "37374908"}, "NCKAP1L_None": {"ref_cnt": ["120", "121", "92"], "ccf_hat": [0.02, 0.04, 0.58], "alt_cnt": ["0", "0", "28"], "chrom": "12", "pos": "54913049"}, "ZNF543_None": {"ref_cnt": ["141", "141", "151"], "ccf_hat": [0.02, 0.04, 0.4], "alt_cnt": ["0", "0", "20"], "chrom": "19", "pos": "57839590"}, "SPTB_None": {"ref_cnt": ["163", "146", "156"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "16"], "chrom": "14", "pos": "65249071"}}, "line_width": 7.0, "cnvs": {}}}, "xlabels": ["T0", "T1", "T2"], "child_dict": {"1": [2, 4], "2": [3, 5], "3": [], "4": [6], "5": [], "6": [], "null": [1]}, "time_points": [50.0, 100.0, 120.0], "tumor_sizes": [[50.0, 1.0], [100.0, 1.0], [120.0, 1.0]]})
+    })
+  </script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.tree", {
+
+        options: {
+          patient: "",
+          child_dict: {},
+          tree_coordinates: {},
+          cluster_dict: {}
+        },
+
+        _elements: {
+          svg_tree: undefined,
+          branch_trunc_labels: {},
+          branch_full_labels: {}
+        },
+
+        _create: function() {
+          let patient = this.options.patient,
+            child_dict = this.options.child_dict,
+            tree_coordinates = this.options.tree_coordinates,
+            cluster_dict = this.options.cluster_dict,
+            clusters = Object.keys(tree_coordinates),
+            edges = [];
+
+          for (let parent in child_dict) {
+            child_dict[parent].forEach(function(child) {
+              edges.push([parent, child])
+            })
+          }
+
+          let svg_tree = d3.select(document.createElement("svg"))
+            .attr("baseProfile", "full")
+            .attr("version", "1.1")
+            .attr("xmlns", "http://www.w3.org/2000/svg")
+            .attr("xmlns:ev", "http://www.w3.org/2001/xml-events")
+            .attr("xmlns:xlink", "http://www.w3.org/1999/xlink")
+            .attr("overflow", "visible")
+            .attr("style", "max-height: 600px;")
+            .attr("width", this.element.context.parentNode.getBoundingClientRect().width);
+          svg_tree.append("g")
+            .append("text")
+              .attr("x", -20)
+              .attr("y", 40)
+              .attr("text-anchor", "end")
+              .attr("font", "Arial")
+              .attr("font-size", "20px")
+              .html(patient);
+
+          let branch_cont = svg_tree.append("g")
+            .selectAll("line")
+            .data(edges)
+            .join("line")
+            .attr("x1", d => tree_coordinates[d[0]][0])
+            .attr("y1", d => tree_coordinates[d[0]][1])
+            .attr("x2", d => tree_coordinates[d[1]][0])
+            .attr("y2", d => tree_coordinates[d[1]][1])
+            .attr("stroke", d => cluster_dict[d[1]].color)
+            .attr("stroke-width", 8)
+            .attr("opacity", 1.0)
+            .attr("class", d => d[1]);
+
+          let node_cont = svg_tree.append("g")
+            .selectAll("circle")
+            .data(clusters)
+            .join("circle")
+            .attr("cx", d => tree_coordinates[d][0])
+            .attr("cy", d => tree_coordinates[d][1])
+            .attr("r", d => d !== "null" ? 12 : 24)
+            .attr("stroke", "white")
+            .attr("stroke-width", 1)
+            .attr("fill", d => d !== "null" ? cluster_dict[d].color : "blue")
+            .attr("opacity", 1.0);
+
+          let node_label_cont = svg_tree.append("g")
+            .selectAll("text")
+            .data(clusters)
+            .join("text")
+            .attr("x", d => tree_coordinates[d][0])
+            .attr("y", d => tree_coordinates[d][1] + 5)
+            .attr("text-anchor", "middle")
+            .attr("fill", "white")
+            .text(d => d !== "null" ? d : "normal");
+
+          let branch_label_cont = svg_tree.append("g"),
+            branch_trunc_labels = {},
+            branch_full_labels = {};
+          for (let e in edges) {
+            let edge = edges[e],
+              cnvs = Object.keys(cluster_dict[edge[1]].muts).filter(m => m.startsWith("loss") || m.startsWith("gain") || m === "WGD"),
+              branch_height = Math.abs(tree_coordinates[edge[0]][1] - tree_coordinates[edge[1]][1]),
+              n_labels = Math.max(4, branch_height / 10 - 2),
+              label_list = [Object.keys(cluster_dict[edge[1]].muts).length, ...cluster_dict[edge[1]].drivers, ...cnvs],
+              truncate = label_list.length > n_labels + 1,
+              trunc_labels = truncate ? [...label_list.slice(0, n_labels), "..."] : label_list;
+            branch_trunc_labels[edge[1]] = (trunc_labels);
+            branch_full_labels[edge[1]] = (label_list);
+            branch_label_cont.append("text")
+              .attr("y", (tree_coordinates[edge[0]][1] + tree_coordinates[edge[1]][1]) / 2 - (5 * (trunc_labels.length)))
+              .attr("text-anchor", "middle")
+              .attr("font-size", 10)
+              .attr("font-weight", "bold")
+              .attr("parent", edge[0])
+              .attr("child", edge[1])
+              .selectAll("tspan")
+              .data(trunc_labels)
+              .join("tspan")
+              .attr("x", (tree_coordinates[edge[0]][0] + tree_coordinates[edge[1]][0]) / 2)
+              .attr("dy", 10)
+              .attr("onclick", d => d === "..." ? "$(\"#tree\").tree(\"expand\", this)" : "")
+              .attr("style", d => d === "..." ? "cursor: pointer;" : "")
+              .text((d, i) => i ? d : "(" + d + ")");
+          }
+
+          let x_values = Object.values(tree_coordinates).map(p => p[0]),
+            y_values = Object.values(tree_coordinates).map(p => p[1]),
+            x_min = Math.min(...x_values),
+            x_max = Math.max(...x_values),
+            y_min = Math.min(...y_values),
+            y_max = Math.max(...y_values),
+            view_x_min = x_max - x_min > 300 ? x_min - 50 : (x_min + x_max) / 2 - 200,
+            view_y_min = y_max - y_min > 400 ? y_min - 50 : (y_min + y_max) / 2 - 250,
+            view_width = x_max - x_min > 300 ? x_max - x_min + 100 : 400,
+            view_height = y_max - y_min > 400 ? y_max - y_min + 100 : 500;
+
+          svg_tree.attr("viewBox", [view_x_min, view_y_min, view_width, view_height].join(","));
+
+          this._elements.svg_tree = svg_tree.node();
+          this._elements.branch_full_labels = branch_full_labels;
+          this._elements.branch_trunc_labels = branch_trunc_labels;
+
+          this._refresh();
+        },
+
+        _refresh: function() {
+          this.element.context.innerHTML = this._elements.svg_tree.outerHTML;
+        },
+
+        download: function() {
+          let dl_link = "data:text/plain;charset=utf-8," + encodeURIComponent(this._elements.svg_tree.outerHTML.replace("viewbox", "viewBox")),
+            dl = document.createElement("a");
+          document.body.appendChild(dl);
+          dl.setAttribute("href", dl_link);
+          dl.setAttribute("download", "patient1" + ".tree.svg");
+          dl.click();
+        },
+
+        expand: function(label) {
+          let branch_label = d3.select(label.parentElement),
+            parent = branch_label.attr("parent"),
+            child = branch_label.attr("child"),
+            label_list = [...this._elements.branch_full_labels[child], "Condense ^"],
+            tree_coordinates = this.options.tree_coordinates;
+          branch_label
+            .attr("y", (tree_coordinates[parent][1] + tree_coordinates[child][1]) / 2 - (5 * (label_list.length)))
+            .selectAll("tspan")
+            .data(label_list)
+            .join("tspan")
+            .attr("x", (tree_coordinates[parent][0] + tree_coordinates[child][0]) / 2)
+            .attr("dy", 10)
+            .attr("onclick", d => d === "Condense ^" ? "$(\"#tree\").tree(\"condense\", this)" : "")
+            .attr("style", d => d === "Condense ^" ? "cursor: pointer;" : "")
+            .text((d, i) => i ? d : "(" + d + ")")
+        },
+
+        condense: function(label) {
+          let branch_label = d3.select(label.parentElement),
+            parent = branch_label.attr("parent"),
+            child = branch_label.attr("child"),
+            trunc_labels = this._elements.branch_trunc_labels[child],
+            tree_coordinates = this.options.tree_coordinates;
+          branch_label
+            .attr("y", (tree_coordinates[parent][1] + tree_coordinates[child][1]) / 2 - (5 * (trunc_labels.length)))
+            .selectAll("tspan")
+            .data(trunc_labels)
+            .join("tspan")
+            .attr("x", (tree_coordinates[parent][0] + tree_coordinates[child][0]) / 2)
+            .attr("dy", 10)
+            .attr("onclick", d => d === "..." ? "$(\"#tree\").tree(\"expand\", this)" : "")
+            .attr("style", d => d === "..." ? "cursor: pointer;" : "")
+            .text((d, i) => i ? d : "(" + d + ")")
+        },
+
+        _destroy: function() {
+          this.element.context.innerHTML = ""
+        }
+
+      });
+
+      let tree_options = {"tree_coordinates": {"1": [0.0, 200.0], "2": [-60.528913084997605, 366.30182192516236], "3": [30.45102247946354, 496.2346355550735], "4": [152.93547772716673, 271.31498446777107], "5": [-170.17274593002742, 475.94565477019216], "6": [310.8793294553651, 313.6359119878028], "null": [0.0, 0.0]}, "cluster_dict": {"1": {"ccf_hat": [1.0, 1.0, 1.0], "tumor_abundance": [1.0, 1.0, 1.0], "ccf_high": [1.0, 1.0, 1.0], "color": "rgb(39,140,24)", "drivers": ["MTOR_None"], "ccf_low": [1.0, 1.0, 1.0], "muts": {"C19orf57_None": {"ref_cnt": ["102", "111", "120"], "ccf_hat": [0.92, 0.93, 0.92], "alt_cnt": ["39", "30", "52"], "chrom": "19", "pos": "14000618"}, "TREX2_None": {"ref_cnt": ["84", "89", "53"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["67", "44", "80"], "chrom": "23", "pos": "152710812"}, "MORF4L1_None": {"ref_cnt": ["76", "91", "63"], "ccf_hat": [0.98, 0.96, 0.98], "alt_cnt": ["42", "28", "56"], "chrom": "15", "pos": "79184620"}, "FMNL3_None": {"ref_cnt": ["76", "97", "68"], "ccf_hat": [0.98, 0.91, 0.96], "alt_cnt": ["45", "24", "53"], "chrom": "12", "pos": "50042824"}, "RP11-144G6.4_None": {"ref_cnt": ["74", "87", "63"], "ccf_hat": [0.98, 0.97, 0.98], "alt_cnt": ["46", "32", "57"], "chrom": "10", "pos": "47192168"}, "NHSL2_None": {"ref_cnt": ["109", "104", "85"], "ccf_hat": [0.93, 0.94, 0.99], "alt_cnt": ["42", "29", "68"], "chrom": "23", "pos": "71358975"}, "FREM2_None": {"ref_cnt": ["82", "101", "69"], "ccf_hat": [0.94, 0.71, 0.99], "alt_cnt": ["37", "18", "91"], "chrom": "13", "pos": "39424226"}, "CACNA1H_None": {"ref_cnt": ["37", "64", "18"], "ccf_hat": [0.98, 0.97, 0.94], "alt_cnt": ["42", "29", "48"], "chrom": "16", "pos": "1267980"}, "TCEAL7_None": {"ref_cnt": ["107", "104", "72"], "ccf_hat": [0.95, 0.94, 0.98], "alt_cnt": ["43", "29", "60"], "chrom": "23", "pos": "102586451"}, "CBFA2T2_None": {"ref_cnt": ["85", "99", "62"], "ccf_hat": [0.91, 0.8, 0.98], "alt_cnt": ["35", "20", "58"], "chrom": "20", "pos": "32232338"}, "MTOR_None": {"ref_cnt": ["32", "59", "16"], "ccf_hat": [0.98, 0.98, 0.96], "alt_cnt": ["47", "34", "50"], "chrom": "1", "pos": "11190680"}, "SNX29P2_None": {"ref_cnt": ["36", "70", "12"], "ccf_hat": [0.98, 0.95, 0.98], "alt_cnt": ["42", "23", "54"], "chrom": "16", "pos": "29393068"}, "METTL2A_None": {"ref_cnt": ["87", "93", "73"], "ccf_hat": [0.85, 0.94, 0.92], "alt_cnt": ["32", "26", "47"], "chrom": "17", "pos": "60501595"}, "GPR133_None": {"ref_cnt": ["77", "97", "63"], "ccf_hat": [0.95, 0.6, 0.92], "alt_cnt": ["38", "15", "48"], "chrom": "12", "pos": "131620700"}, "TRO_None": {"ref_cnt": ["85", "84", "88"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["66", "49", "65"], "chrom": "23", "pos": "54949804"}}, "line_width": 7.0, "cnvs": {}}, "2": {"ccf_hat": [1.0, 1.0, 0.23], "tumor_abundance": [0.99, 0.99, 0.0], "ccf_high": [1.0, 1.0, 0.28], "color": "rgb(103,200,243)", "drivers": [], "ccf_low": [1.0, 1.0, 0.21], "muts": {"L3MBTL1_None": {"ref_cnt": ["114", "117", "114"], "ccf_hat": [0.98, 0.92, 0.34], "alt_cnt": ["50", "28", "19"], "chrom": "20", "pos": "42143973"}, "CACNA1C_None": {"ref_cnt": ["82", "92", "108"], "ccf_hat": [0.95, 0.96, 0.25], "alt_cnt": ["38", "28", "12"], "chrom": "12", "pos": "2224416"}, "CLCN3_None": {"ref_cnt": ["80", "90", "106"], "ccf_hat": [0.97, 0.97, 0.31], "alt_cnt": ["40", "30", "15"], "chrom": "4", "pos": "170618648"}, "DNAH9_None": {"ref_cnt": ["79", "93", "104"], "ccf_hat": [0.97, 0.96, 0.35], "alt_cnt": ["41", "28", "17"], "chrom": "17", "pos": "11786979"}, "TEAD2_None": {"ref_cnt": ["112", "120", "158"], "ccf_hat": [0.74, 0.73, 0.28], "alt_cnt": ["29", "19", "14"], "chrom": "19", "pos": "49846623"}, "SNAP25-AS1_None": {"ref_cnt": ["84", "99", "111"], "ccf_hat": [0.92, 0.86, 0.19], "alt_cnt": ["36", "22", "10"], "chrom": "20", "pos": "10258368"}, "ADAM12_None": {"ref_cnt": ["74", "96", "108"], "ccf_hat": [0.98, 0.92, 0.25], "alt_cnt": ["46", "25", "12"], "chrom": "10", "pos": "127806625"}, "GABRA4_None": {"ref_cnt": ["80", "96", "105"], "ccf_hat": [0.95, 0.91, 0.3], "alt_cnt": ["38", "24", "14"], "chrom": "4", "pos": "46994934"}, "LZTS2_None": {"ref_cnt": ["77", "92", "105"], "ccf_hat": [0.98, 0.96, 0.32], "alt_cnt": ["43", "28", "15"], "chrom": "10", "pos": "102766269"}, "RANBP6_None": {"ref_cnt": ["87", "97", "101"], "ccf_hat": [0.86, 0.89, 0.4], "alt_cnt": ["33", "23", "19"], "chrom": "9", "pos": "6014284"}, "RGS20_None": {"ref_cnt": ["78", "95", "69"], "ccf_hat": [0.98, 0.94, 0.25], "alt_cnt": ["42", "26", "11"], "chrom": "8", "pos": "54764473"}, "CPNE8_None": {"ref_cnt": ["68", "89", "115"], "ccf_hat": [0.99, 0.97, 0.1], "alt_cnt": ["52", "30", "6"], "chrom": "12", "pos": "39047810"}, "DPH2_None": {"ref_cnt": ["46", "76", "55"], "ccf_hat": [0.81, 0.87, 0.27], "alt_cnt": ["32", "17", "11"], "chrom": "1", "pos": "44436272"}, "ZNF675_None": {"ref_cnt": ["104", "115", "161"], "ccf_hat": [0.91, 0.85, 0.22], "alt_cnt": ["38", "25", "11"], "chrom": "19", "pos": "23837467"}, "TROAP_None": {"ref_cnt": ["83", "98", "109"], "ccf_hat": [0.95, 0.9, 0.22], "alt_cnt": ["38", "24", "11"], "chrom": "12", "pos": "49723678"}, "FN1_None": {"ref_cnt": ["81", "95", "79"], "ccf_hat": [0.95, 0.9, 0.24], "alt_cnt": ["38", "23", "21"], "chrom": "2", "pos": "216279555"}, "CNTD1_None": {"ref_cnt": ["83", "92", "106"], "ccf_hat": [0.94, 0.96, 0.3], "alt_cnt": ["37", "28", "14"], "chrom": "17", "pos": "40958783"}}, "line_width": 8.0, "cnvs": {}}, "3": {"ccf_hat": [0.68, 0.4, 0.09], "tumor_abundance": [0.69, 0.43, 0.0], "ccf_high": [0.69, 0.43, 0.09], "color": "rgb(248,139,16)", "drivers": [], "ccf_low": [0.67, 0.37, 0.09], "muts": {"PCNXL2_None": {"ref_cnt": ["46", "85", "56"], "ccf_hat": [0.81, 0.41, 0.24], "alt_cnt": ["32", "8", "10"], "chrom": "1", "pos": "233394701"}, "PIPOX_None": {"ref_cnt": ["97", "112", "115"], "ccf_hat": [0.61, 0.38, 0.08], "alt_cnt": ["21", "8", "4"], "chrom": "17", "pos": "27372016"}, "FRRS1L_None": {"ref_cnt": ["128", "138", "166"], "ccf_hat": [0.86, 0.32, 0.19], "alt_cnt": ["35", "7", "10"], "chrom": "9", "pos": "111903657"}, "MPRIP_None": {"ref_cnt": ["101", "116", "119"], "ccf_hat": [0.57, 0.27, 0.04], "alt_cnt": ["20", "5", "1"], "chrom": "17", "pos": "17050651"}, "EMX2_None": {"ref_cnt": ["88", "111", "107"], "ccf_hat": [0.84, 0.41, 0.27], "alt_cnt": ["32", "9", "13"], "chrom": "10", "pos": "119307662"}, "GK2_None": {"ref_cnt": ["88", "109", "106"], "ccf_hat": [0.84, 0.47, 0.3], "alt_cnt": ["32", "11", "14"], "chrom": "4", "pos": "80328130"}, "DNAJC13_None": {"ref_cnt": ["57", "82", "61"], "ccf_hat": [0.67, 0.49, 0.09], "alt_cnt": ["22", "10", "5"], "chrom": "3", "pos": "132176120"}, "USP15_None": {"ref_cnt": ["93", "113", "107"], "ccf_hat": [0.75, 0.41, 0.27], "alt_cnt": ["28", "9", "13"], "chrom": "12", "pos": "62743075"}, "FBP2_None": {"ref_cnt": ["146", "143", "174"], "ccf_hat": [0.35, 0.27, 0.04], "alt_cnt": ["15", "6", "1"], "chrom": "9", "pos": "97333853"}, "BOP1_None": {"ref_cnt": ["103", "106", "75"], "ccf_hat": [0.43, 0.52, 0.07], "alt_cnt": ["16", "13", "4"], "chrom": "8", "pos": "145515007"}, "CDC7_None": {"ref_cnt": ["63", "88", "60"], "ccf_hat": [0.51, 0.29, 0.11], "alt_cnt": ["16", "5", "6"], "chrom": "1", "pos": "91978846"}, "SLC22A13_None": {"ref_cnt": ["58", "88", "64"], "ccf_hat": [0.66, 0.29, 0.05], "alt_cnt": ["21", "5", "2"], "chrom": "3", "pos": "38318557"}, "ZSCAN20_None": {"ref_cnt": ["43", "82", "58"], "ccf_hat": [0.9, 0.54, 0.18], "alt_cnt": ["35", "11", "8"], "chrom": "1", "pos": "33945050"}, "LZIC_None": {"ref_cnt": ["61", "86", "65"], "ccf_hat": [0.56, 0.41, 0.04], "alt_cnt": ["17", "8", "1"], "chrom": "1", "pos": "9996650"}, "SORCS1_None": {"ref_cnt": ["84", "105", "114"], "ccf_hat": [0.93, 0.54, 0.11], "alt_cnt": ["37", "14", "7"], "chrom": "10", "pos": "108338950"}}, "line_width": 7.0, "cnvs": {}}, "4": {"ccf_hat": [0.01, 0.01, 1.0], "tumor_abundance": [0.01, 0.01, 1.0], "ccf_high": [0.01, 0.01, 1.0], "color": "rgb(16,49,41)", "drivers": ["TP53_None"], "ccf_low": [0.01, 0.01, 1.0], "muts": {"C3_None": {"ref_cnt": ["142", "139", "130"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "43"], "chrom": "19", "pos": "6714393"}, "MBTPS2_None": {"ref_cnt": ["151", "133", "110"], "ccf_hat": [0.02, 0.04, 0.78], "alt_cnt": ["0", "0", "43"], "chrom": "23", "pos": "21875555"}, "RP11-766F14.2_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "4", "pos": "100572683"}, "NEDD4L_None": {"ref_cnt": ["160", "146", "86"], "ccf_hat": [0.02, 0.04, 0.9], "alt_cnt": ["0", "0", "46"], "chrom": "18", "pos": "55997995"}, "TP53_None": {"ref_cnt": ["120", "118", "81"], "ccf_hat": [0.02, 0.04, 0.77], "alt_cnt": ["0", "0", "38"], "chrom": "17", "pos": "7578190"}, "USP43_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "17", "pos": "9603498"}, "BICC1_None": {"ref_cnt": ["118", "122", "79"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "41"], "chrom": "10", "pos": "60549075"}, "TLN2_None": {"ref_cnt": ["120", "120", "74"], "ccf_hat": [0.02, 0.04, 0.91], "alt_cnt": ["0", "0", "46"], "chrom": "15", "pos": "63112738"}, "SLC22A12_None": {"ref_cnt": ["79", "92", "30"], "ccf_hat": [0.03, 0.05, 0.75], "alt_cnt": ["0", "0", "35"], "chrom": "11", "pos": "64366049"}, "DOCK9_None": {"ref_cnt": ["119", "120", "83"], "ccf_hat": [0.02, 0.04, 0.99], "alt_cnt": ["0", "0", "76"], "chrom": "13", "pos": "99515321"}, "OR2L13_None": {"ref_cnt": ["78", "93", "23"], "ccf_hat": [0.03, 0.05, 0.87], "alt_cnt": ["0", "0", "43"], "chrom": "1", "pos": "248185331"}}, "line_width": 5.0, "cnvs": {}}, "5": {"ccf_hat": [0.14, 0.32, 0.2], "tumor_abundance": [0.14, 0.3, 0.0], "ccf_high": [0.17, 0.37, 0.34], "color": "rgb(93,119,254)", "drivers": ["MED23_None"], "ccf_low": [0.12, 0.27, 0.09], "muts": {"PATL2_None": {"ref_cnt": ["112", "116", "111"], "ccf_hat": [0.21, 0.27, 0.16], "alt_cnt": ["7", "5", "9"], "chrom": "15", "pos": "44965480"}, "TOP3A_None": {"ref_cnt": ["117", "113", "104"], "ccf_hat": [0.11, 0.35, 0.32], "alt_cnt": ["3", "7", "15"], "chrom": "17", "pos": "18218028"}, "SMIM20_None": {"ref_cnt": ["114", "110", "110"], "ccf_hat": [0.21, 0.38, 0.14], "alt_cnt": ["7", "8", "8"], "chrom": "4", "pos": "25916019"}, "TNC_None": {"ref_cnt": ["156", "141", "169"], "ccf_hat": [0.18, 0.31, 0.14], "alt_cnt": ["6", "7", "8"], "chrom": "9", "pos": "117825247"}, "SALL4_None": {"ref_cnt": ["112", "112", "109"], "ccf_hat": [0.23, 0.35, 0.22], "alt_cnt": ["8", "7", "11"], "chrom": "20", "pos": "50400965"}, "BAAT_None": {"ref_cnt": ["156", "137", "162"], "ccf_hat": [0.18, 0.42, 0.24], "alt_cnt": ["6", "11", "12"], "chrom": "9", "pos": "104133603"}, "TMEM184B_None": {"ref_cnt": ["73", "85", "53"], "ccf_hat": [0.19, 0.41, 0.31], "alt_cnt": ["5", "8", "13"], "chrom": "22", "pos": "38642056"}, "OR4E2_None": {"ref_cnt": ["119", "111", "112"], "ccf_hat": [0.06, 0.41, 0.13], "alt_cnt": ["1", "9", "8"], "chrom": "14", "pos": "22133786"}, "MARK3_None": {"ref_cnt": ["161", "142", "166"], "ccf_hat": [0.1, 0.16, 0.16], "alt_cnt": ["3", "3", "9"], "chrom": "14", "pos": "103934398"}, "MAP4_None": {"ref_cnt": ["75", "88", "53"], "ccf_hat": [0.13, 0.29, 0.31], "alt_cnt": ["3", "5", "13"], "chrom": "3", "pos": "47933834"}, "RP11-983P16.4_None": {"ref_cnt": ["113", "111", "110"], "ccf_hat": [0.21, 0.35, 0.19], "alt_cnt": ["7", "7", "10"], "chrom": "12", "pos": "53448131"}, "RAB11FIP5_None": {"ref_cnt": ["116", "118", "86"], "ccf_hat": [0.11, 0.14, 0.2], "alt_cnt": ["3", "2", "14"], "chrom": "2", "pos": "73308135"}, "MED23_None": {"ref_cnt": ["96", "106", "108"], "ccf_hat": [0.09, 0.42, 0.15], "alt_cnt": ["3", "9", "8"], "chrom": "6", "pos": "131908818"}}, "line_width": 6.0, "cnvs": {}}, "6": {"ccf_hat": [0.01, 0.01, 0.44], "tumor_abundance": [0.01, 0.01, 0.43], "ccf_high": [0.01, 0.01, 0.47], "color": "rgb(152,22,26)", "drivers": [], "ccf_low": [0.01, 0.01, 0.4], "muts": {"FGD2_None": {"ref_cnt": ["100", "114", "98"], "ccf_hat": [0.01, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "6", "pos": "36993628"}, "ARHGAP21_None": {"ref_cnt": ["120", "120", "91"], "ccf_hat": [0.02, 0.04, 0.6], "alt_cnt": ["0", "0", "29"], "chrom": "10", "pos": "24923955"}, "LIN9_None": {"ref_cnt": ["79", "92", "42"], "ccf_hat": [0.03, 0.05, 0.56], "alt_cnt": ["0", "0", "24"], "chrom": "1", "pos": "226488883"}, "IFNA2_None": {"ref_cnt": ["120", "120", "105"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "15"], "chrom": "9", "pos": "21385148"}, "SYTL1_None": {"ref_cnt": ["78", "94", "45"], "ccf_hat": [0.03, 0.05, 0.51], "alt_cnt": ["0", "0", "22"], "chrom": "1", "pos": "27677959"}, "NRAP_None": {"ref_cnt": ["120", "121", "104"], "ccf_hat": [0.02, 0.04, 0.34], "alt_cnt": ["0", "0", "16"], "chrom": "10", "pos": "115356883"}, "PYROXD2_None": {"ref_cnt": ["119", "121", "100"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "10", "pos": "100174813"}, "MTR_None": {"ref_cnt": ["77", "93", "46"], "ccf_hat": [0.03, 0.05, 0.49], "alt_cnt": ["0", "0", "21"], "chrom": "1", "pos": "236998929"}, "CCDC159_None": {"ref_cnt": ["140", "140", "148"], "ccf_hat": [0.02, 0.04, 0.47], "alt_cnt": ["0", "0", "24"], "chrom": "19", "pos": "11461587"}, "TNFAIP2_None": {"ref_cnt": ["161", "145", "154"], "ccf_hat": [0.02, 0.04, 0.38], "alt_cnt": ["0", "0", "19"], "chrom": "14", "pos": "103599771"}, "CHST10_None": {"ref_cnt": ["120", "120", "77"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "23"], "chrom": "2", "pos": "101009835"}, "EIF2AK2_None": {"ref_cnt": ["119", "120", "80"], "ccf_hat": [0.02, 0.04, 0.22], "alt_cnt": ["0", "0", "20"], "chrom": "2", "pos": "37374908"}, "NCKAP1L_None": {"ref_cnt": ["120", "121", "92"], "ccf_hat": [0.02, 0.04, 0.58], "alt_cnt": ["0", "0", "28"], "chrom": "12", "pos": "54913049"}, "ZNF543_None": {"ref_cnt": ["141", "141", "151"], "ccf_hat": [0.02, 0.04, 0.4], "alt_cnt": ["0", "0", "20"], "chrom": "19", "pos": "57839590"}, "SPTB_None": {"ref_cnt": ["163", "146", "156"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "16"], "chrom": "14", "pos": "65249071"}}, "line_width": 7.0, "cnvs": {}}}, "child_dict": {"1": [2, 4], "2": [3, 5], "3": [], "4": [6], "5": [], "6": [], "null": [1]}, "patient": "patient1"};
+
+      if (tree_options) {
+        let tree_div = $("#tree");
+        d3.select(tree_div[0].parentElement).append("button")
+          .attr("onclick", "$(\"#tree\").tree(\"download\")")
+          .attr("style", "font-size: 12px;")
+          .html("Download as SVG");
+        tree_div.tree(tree_options)
+      } else {
+        $("#tree").append("h3")
+          .html("Run BuildTree to display tree")
+      }
+
+    });
+  </script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.tree_switch", {
+        options: {
+          patient: "",
+          tree_iterations: [],
+          child_dicts: [],
+          tree_coordinates: [],
+          cluster_dict: {}
+        },
+
+        _create: function() {
+          let tree_iterations = this.options.tree_iterations,
+            widg = this;
+
+          let dropdown = d3.select(this.element.context).append("select")
+            .attr("class", "form-control");
+
+          dropdown.selectAll("option")
+            .data(tree_iterations)
+            .join("option")
+            .html((d, i) => "Tree " + (i + 1) + " (" + d + ")");
+
+          dropdown.on("change", function() {widg.switch_tree(this.selectedIndex)})
+        },
+
+        switch_tree: function(i) {
+          let patient = this.options.patient,
+            child_dicts = this.options.child_dicts,
+            tree_coordinates = this.options.tree_coordinates,
+            cluster_dict = this.options.cluster_dict,
+            tree = $("#tree");
+
+          tree.tree("destroy");
+
+          tree.tree({
+            patient: patient,
+            child_dict: child_dicts[i],
+            tree_coordinates: tree_coordinates[i],
+            cluster_dict: cluster_dict
+          })
+        }
+      });
+
+      let tree_switch_options = false;
+
+      if (tree_switch_options) {
+        $("#tree-switch").tree_switch(tree_switch_options)
+      }
+    })
+  </script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.treatment_plot", {
+
+        options: {
+          width: 500,
+          height: 50,
+          margins: {right: 50, left: 50},
+          treatments: [],
+          samples: [],
+          treatment_color_map: {}
+        },
+
+        _elements: {
+          treatment_plot: undefined,
+          tooltip: undefined
+        },
+
+        _create: function() {
+          const width = this.options.width,
+            height = this.options.height,
+            margins = this.options.margins,
+            treatments = this.options.treatments,
+            samples = this.options.samples,
+            treatment_color_map = this.options.treatment_color_map;
+
+          let t = d3.scaleLinear()
+            .domain([Math.min(...samples), Math.max(...samples)])
+            .range([margins.left, width - margins.right]);
+
+          let xAxis = g => g
+            .attr("transform", "translate(0 " + height.toString() + ")")
+            .call(d3.axisBottom(t));
+
+          let treatment_plot = d3.select(document.createElement("svg"))
+            .attr("baseProfile", "full")
+            .attr("viewBox", "0 0 " + width + " " + (height * 2))
+            .attr("version", "1.1")
+            .attr("xmlns", "http://www.w3.org/2000/svg")
+            .attr("xmlns:ev", "http://www.w3.org/2001/xml-events")
+            .attr("xmlns:xlink", "http://www.w3.org/1999/xlink")
+            .attr("overflow", "visible")
+            .attr("onclick", "$(\"#treatment-plot\").treatment_plot(\"toggle_tx\", event)")
+            .style("max-height", "100px");
+          treatment_plot.append("g")
+            .call(xAxis);
+
+          for (let tx in treatments) {
+            let tx_start = Math.max(treatments[tx].tx_start, samples[0]),
+              tx_end = Math.min(treatments[tx].tx_end, samples[samples.length - 1]);
+            if (tx_end > samples[0] && tx_start < samples[samples.length - 1]) {
+              let color = treatment_color_map[treatments[tx].tx];
+              treatment_plot.append("line")
+                .attr("stroke", color)
+                .attr("stroke-width", 10)
+                .attr("x1", t(tx_start))
+                .attr("x2", t(tx_end))
+                .attr("y1", 25)
+                .attr("y2", 25)
+                .attr("opacity", 1.0)
+                .attr("tx", treatments[tx].tx)
+                .attr("style", "cursor: pointer;")
+            }
+          }
+
+          for (let s in samples) {
+            treatment_plot.append("line")
+              .attr("stroke", "black")
+              .attr("stroke-width", 1)
+              .attr("x1", t(samples[s]))
+              .attr("x2", t(samples[s]))
+              .attr("y1", 10)
+              .attr("y2", 40)
+              .attr("opacity", 1.0);
+          }
+
+          this._elements.tooltip = treatment_plot.append("g")
+            .attr("style", "display: none;")
+            .node();
+          this._elements.treatment_plot = treatment_plot.node();
+
+          this._refresh()
+        },
+
+        _refresh: function() {
+          this.element.context.innerHTML = this._elements.treatment_plot.outerHTML
+        },
+
+        toggle_tx: function(eve) {
+          if (typeof eve.target.getAttribute("tx") === "string") {
+            let tx_line = eve.target,
+              tooltip = d3.select(this._elements.tooltip);
+            let {x, width} = tx_line.getBBox(),
+              tx_mid = x + (width / 2);
+            tooltip.attr("style", "display: block;")
+              .attr("transform", "translate(" + tx_mid.toString() + ",60)");
+
+            let border = tooltip.selectAll("path")
+              .data([null])
+              .join("path")
+                .attr("fill", "white")
+                .attr("stroke", "black");
+
+            tooltip.selectAll("text")
+              .data([null])
+              .join("text")
+              .attr("id", "treatment-text")
+              .attr("text-anchor", "middle")
+              .call(t => t
+                .selectAll("tspan")
+                .data([tx_line.getAttribute("tx")])
+                .join("tspan")
+                .attr("x", 0)
+                .attr("y", 0)
+                .text(d => d));
+
+            this._refresh();
+
+            let {width: w, height: h} = $("#treatment-text")[0].getBBox();
+
+            border.attr("d", "M" + (-w / 2 - 10).toString() + " " + (-h / 2 - 15).toString() + " H " +
+              (w / 2 + 10).toString() + " V " + (h / 2 + 5).toString() + " H " + (-w / 2 - 10).toString() + " Z");
+          } else {
+            this._elements.tooltip.setAttribute("style", "display: none;");
+          }
+
+          this._refresh();
+        }
+
+      });
+
+      let treatment_data = false;
+
+      if (treatment_data) {
+        $("#treatment-plot").treatment_plot(treatment_data);
+      }
+
+    });
+  </script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.mutation_visual", {
+        options: {
+          cluster_dict: {1: {ccf_hat: [0], ccf_high: [0], ccf_low: [0], color: "green", muts: {}, drivers: []}},
+          aliases: []
+        },
+
+        _elements: {
+          mutation_visual: undefined
+        },
+
+        _create: function() {
+          const cluster_dict = this.options.cluster_dict,
+            aliases = this.options.aliases;
+          let svg_visual = d3.select(document.createElement("svg"))
+            .attr("baseProfile", "full")
+            .attr("version", "1.1")
+            .attr("xmlns", "http://www.w3.org/2000/svg")
+            .attr("xmlns:ev", "http://www.w3.org/2001/xml-events")
+            .attr("xmlns:xlink", "http://www.w3.org/1999/xlink")
+            .attr("overflow", "auto"),
+            c_groups = [[], [], [], []],
+            group_names = ["UNIVERSAL MUTATIONS", "OTHER COMMON MUTATIONS", "OTHER CLONAL", "SUBCLONAL"],
+            group_min_lens = [200, 200, 150, 150];
+          for (let c in cluster_dict) {
+            let clonality = [];
+            for (let s in cluster_dict[c].ccf_hat) {
+              let cl = cluster_dict[c].ccf_hat[s];
+              if (cl > 0.9) {
+                clonality.push(1);
+              } else if (cl > 0.1) {
+                clonality.push(0.5);
+              } else {
+                clonality.push(0);
+              }
+            }
+            if (clonality.every(v => v === 1)) {
+              c_groups[0].push(c);
+            } else if (clonality.reduce((p, a) => p + a) > 1) {
+              c_groups[1].push(c);
+            } else if (clonality.some(v => v === 1)) {
+              c_groups[2].push(c);
+            } else {
+              c_groups[3].push(c);
+            }
+          }
+
+          for (let a in aliases) {
+            svg_visual.append("g")
+              .attr("transform", "translate(15," + (a * 12 + 133).toString() + ")")
+              .append("svg")
+                .attr("width", "100px")
+                .attr("height", "20px")
+                .attr("x", 10)
+                .attr("y", 10)
+                .attr("stroke-width", 1)
+                .attr("stroke", "black")
+                .append("text")
+                  .html(aliases[a])
+                  .attr("font-size", "9px")
+                  .attr("x", 10)
+                  .attr("y", 10)
+                  .attr("text-anchor", "start")
+                  .attr("textLength", 50)
+                  .attr("class", "samples");
+          }
+
+          let x_offset = 20,
+            y_offset = 30,
+            header_x_offset = 70;
+
+          for (let g in c_groups) {
+            if (c_groups[g].length) {
+              let g_len = 0;
+              for (let i in c_groups[g]) {
+                let c = c_groups[g][i],
+                  box_stroke = cluster_dict[c].color,
+                  drivers = cluster_dict[c].drivers,
+                  muts = cluster_dict[c].muts,
+                  sorted_muts = Object.keys(muts).sort(function(a, b) {
+                    if (drivers.includes(a) && drivers.includes(b)) {
+                      return 0
+                    }
+                    if (drivers.includes(a)) {
+                      return -1
+                    }
+                    if (drivers.includes(b)) {
+                      return 1
+                    }
+                    return 0
+                  }),
+                  cnvs = cluster_dict[c].cnvs,
+                  sorted_vars = [...sorted_muts, ...Object.keys(cnvs)];
+                g_len += sorted_vars.length * 12;
+                for (let ii in sorted_vars) {
+                  let mut = sorted_vars[ii],
+                    mut_group = svg_visual.append("g")
+                    .attr("class", "mut_group"),
+                    mut_suffix = mut.includes("_") ? mut.split("_")[1] : "p.A0A",
+                    text_color = mut.startsWith("loss") || mut.startsWith("gain") ?
+                      "black" : ((mut_suffix.length > 3 && mut_suffix[2] === mut_suffix[mut_suffix.length - 1]) ? "gray" : "black"),
+                    text_weight = drivers.includes(mut) ? "bold" : "normal";
+                  mut_group.append("g")
+                    .attr("transform", "rotate(-75," + (x_offset + 53).toString() + ",145) " +
+                      "translate(" + (x_offset + 53).toString() + ",145)")
+                    .append("svg")
+                      .attr("width", "100px")
+                      .attr("height", "20px")
+                      .attr("x", 10)
+                      .attr("y", 10)
+                      .append("text")
+                        .html(mut)
+                        .attr("font-size", "9px")
+                        .attr("font-family", "Arial")
+                        .attr("fill", text_color)
+                        .attr("x", 10)
+                        .attr("y", 10)
+                        .attr("text-anchor", "start")
+                        .attr("textLength", 70)
+                        .attr("font-weight", text_weight)
+                        .attr("class", "cluster_" + c.toString());
+                  for (let a in aliases) {
+                    let ccf_hat = cluster_dict[c].ccf_hat[a],
+                      ccf_1d = mut in muts ? muts[mut].ccf_hat[a] : cnvs[mut].ccf_hat[a],
+                      box_color = ccf_1d < 0.1 ? "white" : cluster_dict[c].color,
+                      box_size = ccf_hat * 9 + 1,
+                      a_box_stroke = ccf_hat > 0.9 ? "red" : box_stroke;
+                    mut_group.append("rect")
+                      .attr("x", x_offset + 75 - (box_size / 2.0))
+                      .attr("y", y_offset + 120 + (a * 12) - (box_size / 2.0))
+                      .attr("width", box_size.toString() + "px")
+                      .attr("height", box_size.toString() + "px")
+                      .attr("stroke-width", 1)
+                      .attr("stroke", a_box_stroke)
+                      .attr("fill", box_color)
+                      .attr("opacity", 0.8)
+                      .attr("class", "cluster_" + c.toString());
+                  }
+                  x_offset += 12;
+                }
+              }
+              svg_visual.append("g")
+                .attr("transform", "translate(" + (20 + header_x_offset).toString() + ",30)")
+                .append("svg")
+                  .attr("width", g_len)
+                  .attr("height", "20px")
+                  .attr("x", 10)
+                  .attr("y", 10)
+                  .attr("stroke-width", 1)
+                  .attr("stroke", "black")
+                  .append("text")
+                    .html(group_names[g])
+                    .attr("font-size", g_len > group_min_lens[g] ? "12px" : "8px")
+                    .attr("x", 10)
+                    .attr("y", 10)
+                    .attr("text-anchor", "start");
+              header_x_offset += g_len + 8;
+              x_offset += 10;
+            }
+          }
+          svg_visual
+            .attr("width", x_offset + 110)
+            .attr("height", y_offset + 160 + (aliases.length * 12));
+          this._elements.mutation_visual = svg_visual.node();
+
+          this._refresh();
+        },
+
+        _refresh: function() {
+          this.element.context.innerHTML = this._elements.mutation_visual.outerHTML;
+        },
+
+        download: function() {
+          let dl_link = "data:text/plain;charset=utf-8," + encodeURIComponent(this._elements.mutation_visual.outerHTML),
+            dl = document.createElement("a");
+          document.body.appendChild(dl);
+          dl.setAttribute("href", dl_link);
+          dl.setAttribute("download", "patient1" + ".clonality_chart.svg");
+          dl.click();
+        }
+      });
+
+      $("#mutation-visual").mutation_visual({"cluster_dict": {"1": {"ccf_hat": [1.0, 1.0, 1.0], "tumor_abundance": [1.0, 1.0, 1.0], "ccf_high": [1.0, 1.0, 1.0], "color": "rgb(39,140,24)", "drivers": ["MTOR_None"], "ccf_low": [1.0, 1.0, 1.0], "muts": {"C19orf57_None": {"ref_cnt": ["102", "111", "120"], "ccf_hat": [0.92, 0.93, 0.92], "alt_cnt": ["39", "30", "52"], "chrom": "19", "pos": "14000618"}, "TREX2_None": {"ref_cnt": ["84", "89", "53"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["67", "44", "80"], "chrom": "23", "pos": "152710812"}, "MORF4L1_None": {"ref_cnt": ["76", "91", "63"], "ccf_hat": [0.98, 0.96, 0.98], "alt_cnt": ["42", "28", "56"], "chrom": "15", "pos": "79184620"}, "FMNL3_None": {"ref_cnt": ["76", "97", "68"], "ccf_hat": [0.98, 0.91, 0.96], "alt_cnt": ["45", "24", "53"], "chrom": "12", "pos": "50042824"}, "RP11-144G6.4_None": {"ref_cnt": ["74", "87", "63"], "ccf_hat": [0.98, 0.97, 0.98], "alt_cnt": ["46", "32", "57"], "chrom": "10", "pos": "47192168"}, "NHSL2_None": {"ref_cnt": ["109", "104", "85"], "ccf_hat": [0.93, 0.94, 0.99], "alt_cnt": ["42", "29", "68"], "chrom": "23", "pos": "71358975"}, "FREM2_None": {"ref_cnt": ["82", "101", "69"], "ccf_hat": [0.94, 0.71, 0.99], "alt_cnt": ["37", "18", "91"], "chrom": "13", "pos": "39424226"}, "CACNA1H_None": {"ref_cnt": ["37", "64", "18"], "ccf_hat": [0.98, 0.97, 0.94], "alt_cnt": ["42", "29", "48"], "chrom": "16", "pos": "1267980"}, "TCEAL7_None": {"ref_cnt": ["107", "104", "72"], "ccf_hat": [0.95, 0.94, 0.98], "alt_cnt": ["43", "29", "60"], "chrom": "23", "pos": "102586451"}, "CBFA2T2_None": {"ref_cnt": ["85", "99", "62"], "ccf_hat": [0.91, 0.8, 0.98], "alt_cnt": ["35", "20", "58"], "chrom": "20", "pos": "32232338"}, "MTOR_None": {"ref_cnt": ["32", "59", "16"], "ccf_hat": [0.98, 0.98, 0.96], "alt_cnt": ["47", "34", "50"], "chrom": "1", "pos": "11190680"}, "SNX29P2_None": {"ref_cnt": ["36", "70", "12"], "ccf_hat": [0.98, 0.95, 0.98], "alt_cnt": ["42", "23", "54"], "chrom": "16", "pos": "29393068"}, "METTL2A_None": {"ref_cnt": ["87", "93", "73"], "ccf_hat": [0.85, 0.94, 0.92], "alt_cnt": ["32", "26", "47"], "chrom": "17", "pos": "60501595"}, "GPR133_None": {"ref_cnt": ["77", "97", "63"], "ccf_hat": [0.95, 0.6, 0.92], "alt_cnt": ["38", "15", "48"], "chrom": "12", "pos": "131620700"}, "TRO_None": {"ref_cnt": ["85", "84", "88"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["66", "49", "65"], "chrom": "23", "pos": "54949804"}}, "line_width": 7.0, "cnvs": {}}, "2": {"ccf_hat": [1.0, 1.0, 0.23], "tumor_abundance": [0.99, 0.99, 0.0], "ccf_high": [1.0, 1.0, 0.28], "color": "rgb(103,200,243)", "drivers": [], "ccf_low": [1.0, 1.0, 0.21], "muts": {"L3MBTL1_None": {"ref_cnt": ["114", "117", "114"], "ccf_hat": [0.98, 0.92, 0.34], "alt_cnt": ["50", "28", "19"], "chrom": "20", "pos": "42143973"}, "CACNA1C_None": {"ref_cnt": ["82", "92", "108"], "ccf_hat": [0.95, 0.96, 0.25], "alt_cnt": ["38", "28", "12"], "chrom": "12", "pos": "2224416"}, "CLCN3_None": {"ref_cnt": ["80", "90", "106"], "ccf_hat": [0.97, 0.97, 0.31], "alt_cnt": ["40", "30", "15"], "chrom": "4", "pos": "170618648"}, "DNAH9_None": {"ref_cnt": ["79", "93", "104"], "ccf_hat": [0.97, 0.96, 0.35], "alt_cnt": ["41", "28", "17"], "chrom": "17", "pos": "11786979"}, "TEAD2_None": {"ref_cnt": ["112", "120", "158"], "ccf_hat": [0.74, 0.73, 0.28], "alt_cnt": ["29", "19", "14"], "chrom": "19", "pos": "49846623"}, "SNAP25-AS1_None": {"ref_cnt": ["84", "99", "111"], "ccf_hat": [0.92, 0.86, 0.19], "alt_cnt": ["36", "22", "10"], "chrom": "20", "pos": "10258368"}, "ADAM12_None": {"ref_cnt": ["74", "96", "108"], "ccf_hat": [0.98, 0.92, 0.25], "alt_cnt": ["46", "25", "12"], "chrom": "10", "pos": "127806625"}, "GABRA4_None": {"ref_cnt": ["80", "96", "105"], "ccf_hat": [0.95, 0.91, 0.3], "alt_cnt": ["38", "24", "14"], "chrom": "4", "pos": "46994934"}, "LZTS2_None": {"ref_cnt": ["77", "92", "105"], "ccf_hat": [0.98, 0.96, 0.32], "alt_cnt": ["43", "28", "15"], "chrom": "10", "pos": "102766269"}, "RANBP6_None": {"ref_cnt": ["87", "97", "101"], "ccf_hat": [0.86, 0.89, 0.4], "alt_cnt": ["33", "23", "19"], "chrom": "9", "pos": "6014284"}, "RGS20_None": {"ref_cnt": ["78", "95", "69"], "ccf_hat": [0.98, 0.94, 0.25], "alt_cnt": ["42", "26", "11"], "chrom": "8", "pos": "54764473"}, "CPNE8_None": {"ref_cnt": ["68", "89", "115"], "ccf_hat": [0.99, 0.97, 0.1], "alt_cnt": ["52", "30", "6"], "chrom": "12", "pos": "39047810"}, "DPH2_None": {"ref_cnt": ["46", "76", "55"], "ccf_hat": [0.81, 0.87, 0.27], "alt_cnt": ["32", "17", "11"], "chrom": "1", "pos": "44436272"}, "ZNF675_None": {"ref_cnt": ["104", "115", "161"], "ccf_hat": [0.91, 0.85, 0.22], "alt_cnt": ["38", "25", "11"], "chrom": "19", "pos": "23837467"}, "TROAP_None": {"ref_cnt": ["83", "98", "109"], "ccf_hat": [0.95, 0.9, 0.22], "alt_cnt": ["38", "24", "11"], "chrom": "12", "pos": "49723678"}, "FN1_None": {"ref_cnt": ["81", "95", "79"], "ccf_hat": [0.95, 0.9, 0.24], "alt_cnt": ["38", "23", "21"], "chrom": "2", "pos": "216279555"}, "CNTD1_None": {"ref_cnt": ["83", "92", "106"], "ccf_hat": [0.94, 0.96, 0.3], "alt_cnt": ["37", "28", "14"], "chrom": "17", "pos": "40958783"}}, "line_width": 8.0, "cnvs": {}}, "3": {"ccf_hat": [0.68, 0.4, 0.09], "tumor_abundance": [0.69, 0.43, 0.0], "ccf_high": [0.69, 0.43, 0.09], "color": "rgb(248,139,16)", "drivers": [], "ccf_low": [0.67, 0.37, 0.09], "muts": {"PCNXL2_None": {"ref_cnt": ["46", "85", "56"], "ccf_hat": [0.81, 0.41, 0.24], "alt_cnt": ["32", "8", "10"], "chrom": "1", "pos": "233394701"}, "PIPOX_None": {"ref_cnt": ["97", "112", "115"], "ccf_hat": [0.61, 0.38, 0.08], "alt_cnt": ["21", "8", "4"], "chrom": "17", "pos": "27372016"}, "FRRS1L_None": {"ref_cnt": ["128", "138", "166"], "ccf_hat": [0.86, 0.32, 0.19], "alt_cnt": ["35", "7", "10"], "chrom": "9", "pos": "111903657"}, "MPRIP_None": {"ref_cnt": ["101", "116", "119"], "ccf_hat": [0.57, 0.27, 0.04], "alt_cnt": ["20", "5", "1"], "chrom": "17", "pos": "17050651"}, "EMX2_None": {"ref_cnt": ["88", "111", "107"], "ccf_hat": [0.84, 0.41, 0.27], "alt_cnt": ["32", "9", "13"], "chrom": "10", "pos": "119307662"}, "GK2_None": {"ref_cnt": ["88", "109", "106"], "ccf_hat": [0.84, 0.47, 0.3], "alt_cnt": ["32", "11", "14"], "chrom": "4", "pos": "80328130"}, "DNAJC13_None": {"ref_cnt": ["57", "82", "61"], "ccf_hat": [0.67, 0.49, 0.09], "alt_cnt": ["22", "10", "5"], "chrom": "3", "pos": "132176120"}, "USP15_None": {"ref_cnt": ["93", "113", "107"], "ccf_hat": [0.75, 0.41, 0.27], "alt_cnt": ["28", "9", "13"], "chrom": "12", "pos": "62743075"}, "FBP2_None": {"ref_cnt": ["146", "143", "174"], "ccf_hat": [0.35, 0.27, 0.04], "alt_cnt": ["15", "6", "1"], "chrom": "9", "pos": "97333853"}, "BOP1_None": {"ref_cnt": ["103", "106", "75"], "ccf_hat": [0.43, 0.52, 0.07], "alt_cnt": ["16", "13", "4"], "chrom": "8", "pos": "145515007"}, "CDC7_None": {"ref_cnt": ["63", "88", "60"], "ccf_hat": [0.51, 0.29, 0.11], "alt_cnt": ["16", "5", "6"], "chrom": "1", "pos": "91978846"}, "SLC22A13_None": {"ref_cnt": ["58", "88", "64"], "ccf_hat": [0.66, 0.29, 0.05], "alt_cnt": ["21", "5", "2"], "chrom": "3", "pos": "38318557"}, "ZSCAN20_None": {"ref_cnt": ["43", "82", "58"], "ccf_hat": [0.9, 0.54, 0.18], "alt_cnt": ["35", "11", "8"], "chrom": "1", "pos": "33945050"}, "LZIC_None": {"ref_cnt": ["61", "86", "65"], "ccf_hat": [0.56, 0.41, 0.04], "alt_cnt": ["17", "8", "1"], "chrom": "1", "pos": "9996650"}, "SORCS1_None": {"ref_cnt": ["84", "105", "114"], "ccf_hat": [0.93, 0.54, 0.11], "alt_cnt": ["37", "14", "7"], "chrom": "10", "pos": "108338950"}}, "line_width": 7.0, "cnvs": {}}, "4": {"ccf_hat": [0.01, 0.01, 1.0], "tumor_abundance": [0.01, 0.01, 1.0], "ccf_high": [0.01, 0.01, 1.0], "color": "rgb(16,49,41)", "drivers": ["TP53_None"], "ccf_low": [0.01, 0.01, 1.0], "muts": {"C3_None": {"ref_cnt": ["142", "139", "130"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "43"], "chrom": "19", "pos": "6714393"}, "MBTPS2_None": {"ref_cnt": ["151", "133", "110"], "ccf_hat": [0.02, 0.04, 0.78], "alt_cnt": ["0", "0", "43"], "chrom": "23", "pos": "21875555"}, "RP11-766F14.2_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "4", "pos": "100572683"}, "NEDD4L_None": {"ref_cnt": ["160", "146", "86"], "ccf_hat": [0.02, 0.04, 0.9], "alt_cnt": ["0", "0", "46"], "chrom": "18", "pos": "55997995"}, "TP53_None": {"ref_cnt": ["120", "118", "81"], "ccf_hat": [0.02, 0.04, 0.77], "alt_cnt": ["0", "0", "38"], "chrom": "17", "pos": "7578190"}, "USP43_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "17", "pos": "9603498"}, "BICC1_None": {"ref_cnt": ["118", "122", "79"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "41"], "chrom": "10", "pos": "60549075"}, "TLN2_None": {"ref_cnt": ["120", "120", "74"], "ccf_hat": [0.02, 0.04, 0.91], "alt_cnt": ["0", "0", "46"], "chrom": "15", "pos": "63112738"}, "SLC22A12_None": {"ref_cnt": ["79", "92", "30"], "ccf_hat": [0.03, 0.05, 0.75], "alt_cnt": ["0", "0", "35"], "chrom": "11", "pos": "64366049"}, "DOCK9_None": {"ref_cnt": ["119", "120", "83"], "ccf_hat": [0.02, 0.04, 0.99], "alt_cnt": ["0", "0", "76"], "chrom": "13", "pos": "99515321"}, "OR2L13_None": {"ref_cnt": ["78", "93", "23"], "ccf_hat": [0.03, 0.05, 0.87], "alt_cnt": ["0", "0", "43"], "chrom": "1", "pos": "248185331"}}, "line_width": 5.0, "cnvs": {}}, "5": {"ccf_hat": [0.14, 0.32, 0.2], "tumor_abundance": [0.14, 0.3, 0.0], "ccf_high": [0.17, 0.37, 0.34], "color": "rgb(93,119,254)", "drivers": ["MED23_None"], "ccf_low": [0.12, 0.27, 0.09], "muts": {"PATL2_None": {"ref_cnt": ["112", "116", "111"], "ccf_hat": [0.21, 0.27, 0.16], "alt_cnt": ["7", "5", "9"], "chrom": "15", "pos": "44965480"}, "TOP3A_None": {"ref_cnt": ["117", "113", "104"], "ccf_hat": [0.11, 0.35, 0.32], "alt_cnt": ["3", "7", "15"], "chrom": "17", "pos": "18218028"}, "SMIM20_None": {"ref_cnt": ["114", "110", "110"], "ccf_hat": [0.21, 0.38, 0.14], "alt_cnt": ["7", "8", "8"], "chrom": "4", "pos": "25916019"}, "TNC_None": {"ref_cnt": ["156", "141", "169"], "ccf_hat": [0.18, 0.31, 0.14], "alt_cnt": ["6", "7", "8"], "chrom": "9", "pos": "117825247"}, "SALL4_None": {"ref_cnt": ["112", "112", "109"], "ccf_hat": [0.23, 0.35, 0.22], "alt_cnt": ["8", "7", "11"], "chrom": "20", "pos": "50400965"}, "BAAT_None": {"ref_cnt": ["156", "137", "162"], "ccf_hat": [0.18, 0.42, 0.24], "alt_cnt": ["6", "11", "12"], "chrom": "9", "pos": "104133603"}, "TMEM184B_None": {"ref_cnt": ["73", "85", "53"], "ccf_hat": [0.19, 0.41, 0.31], "alt_cnt": ["5", "8", "13"], "chrom": "22", "pos": "38642056"}, "OR4E2_None": {"ref_cnt": ["119", "111", "112"], "ccf_hat": [0.06, 0.41, 0.13], "alt_cnt": ["1", "9", "8"], "chrom": "14", "pos": "22133786"}, "MARK3_None": {"ref_cnt": ["161", "142", "166"], "ccf_hat": [0.1, 0.16, 0.16], "alt_cnt": ["3", "3", "9"], "chrom": "14", "pos": "103934398"}, "MAP4_None": {"ref_cnt": ["75", "88", "53"], "ccf_hat": [0.13, 0.29, 0.31], "alt_cnt": ["3", "5", "13"], "chrom": "3", "pos": "47933834"}, "RP11-983P16.4_None": {"ref_cnt": ["113", "111", "110"], "ccf_hat": [0.21, 0.35, 0.19], "alt_cnt": ["7", "7", "10"], "chrom": "12", "pos": "53448131"}, "RAB11FIP5_None": {"ref_cnt": ["116", "118", "86"], "ccf_hat": [0.11, 0.14, 0.2], "alt_cnt": ["3", "2", "14"], "chrom": "2", "pos": "73308135"}, "MED23_None": {"ref_cnt": ["96", "106", "108"], "ccf_hat": [0.09, 0.42, 0.15], "alt_cnt": ["3", "9", "8"], "chrom": "6", "pos": "131908818"}}, "line_width": 6.0, "cnvs": {}}, "6": {"ccf_hat": [0.01, 0.01, 0.44], "tumor_abundance": [0.01, 0.01, 0.43], "ccf_high": [0.01, 0.01, 0.47], "color": "rgb(152,22,26)", "drivers": [], "ccf_low": [0.01, 0.01, 0.4], "muts": {"FGD2_None": {"ref_cnt": ["100", "114", "98"], "ccf_hat": [0.01, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "6", "pos": "36993628"}, "ARHGAP21_None": {"ref_cnt": ["120", "120", "91"], "ccf_hat": [0.02, 0.04, 0.6], "alt_cnt": ["0", "0", "29"], "chrom": "10", "pos": "24923955"}, "LIN9_None": {"ref_cnt": ["79", "92", "42"], "ccf_hat": [0.03, 0.05, 0.56], "alt_cnt": ["0", "0", "24"], "chrom": "1", "pos": "226488883"}, "IFNA2_None": {"ref_cnt": ["120", "120", "105"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "15"], "chrom": "9", "pos": "21385148"}, "SYTL1_None": {"ref_cnt": ["78", "94", "45"], "ccf_hat": [0.03, 0.05, 0.51], "alt_cnt": ["0", "0", "22"], "chrom": "1", "pos": "27677959"}, "NRAP_None": {"ref_cnt": ["120", "121", "104"], "ccf_hat": [0.02, 0.04, 0.34], "alt_cnt": ["0", "0", "16"], "chrom": "10", "pos": "115356883"}, "PYROXD2_None": {"ref_cnt": ["119", "121", "100"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "10", "pos": "100174813"}, "MTR_None": {"ref_cnt": ["77", "93", "46"], "ccf_hat": [0.03, 0.05, 0.49], "alt_cnt": ["0", "0", "21"], "chrom": "1", "pos": "236998929"}, "CCDC159_None": {"ref_cnt": ["140", "140", "148"], "ccf_hat": [0.02, 0.04, 0.47], "alt_cnt": ["0", "0", "24"], "chrom": "19", "pos": "11461587"}, "TNFAIP2_None": {"ref_cnt": ["161", "145", "154"], "ccf_hat": [0.02, 0.04, 0.38], "alt_cnt": ["0", "0", "19"], "chrom": "14", "pos": "103599771"}, "CHST10_None": {"ref_cnt": ["120", "120", "77"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "23"], "chrom": "2", "pos": "101009835"}, "EIF2AK2_None": {"ref_cnt": ["119", "120", "80"], "ccf_hat": [0.02, 0.04, 0.22], "alt_cnt": ["0", "0", "20"], "chrom": "2", "pos": "37374908"}, "NCKAP1L_None": {"ref_cnt": ["120", "121", "92"], "ccf_hat": [0.02, 0.04, 0.58], "alt_cnt": ["0", "0", "28"], "chrom": "12", "pos": "54913049"}, "ZNF543_None": {"ref_cnt": ["141", "141", "151"], "ccf_hat": [0.02, 0.04, 0.4], "alt_cnt": ["0", "0", "20"], "chrom": "19", "pos": "57839590"}, "SPTB_None": {"ref_cnt": ["163", "146", "156"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "16"], "chrom": "14", "pos": "65249071"}}, "line_width": 7.0, "cnvs": {}}}, "aliases": ["T0", "T1", "T2"]})
+    });
+  </script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.cluster_table", {
+
+        options: {
+          aliases: [],
+          cluster_dict: {1: {ccf_hat: [0], ccf_high: [0], ccf_low: [0], color: "green", muts: {}}},
+        },
+
+        _elements: {
+          cluster_table: undefined,
+          column_data: undefined,
+          table_data: undefined,
+          cluster_datatable: undefined
+        },
+
+        _create: function() {
+          let aliases = this.options.aliases,
+            cluster_dict = this.options.cluster_dict,
+            table_el = d3.select(document.createElement("table"))
+              .attr("id", "cluster_table")
+              .attr("class", "hover"),
+            col_width = Math.round(82 / (aliases.length + 1.3)),
+            cluster_col_width = 82 - (aliases.length * col_width),
+            columns = [{"data": "Cluster", "width": cluster_col_width + "%"},
+              {"data": "Chromosome", "width": "9%"},
+              {"data": "Position", "width": "9%"}
+            ],
+            col_list = ["Cluster", "Chromosome", "Position"];
+          for (let i in aliases) {
+            columns.push({"data": aliases[i] + " CCF", "width": col_width + "%"});
+            col_list.push(aliases[i] + " CCF");
+          }
+          table_el.append("thead")
+            .selectAll("th")
+            .data(col_list)
+            .join("th")
+            .text(d => d);
+          let cluster_data = [];
+          for (let c in cluster_dict) {
+            let cluster_dat = {"Cluster": c, "Chromosome": null, "Position": null};
+            for (let i in aliases) {
+              cluster_dat[aliases[i] + " CCF"] = cluster_dict[c].ccf_hat[i] + " (" + cluster_dict[c].ccf_low[i] + "-" + cluster_dict[c].ccf_high[i] + ")";
+            }
+            cluster_data.push(cluster_dat);
+          }
+          this._elements.cluster_table = table_el.node();
+          this._elements.column_data = columns;
+          this._elements.table_data = {"columns": columns,
+            "data": cluster_data,
+            "order": [[0, "asc"]],
+            "paging": false,
+            "bInfo": false,
+            "createdRow": function(row, data, dataIndex) {
+              $(row).css("color", cluster_dict[dataIndex + 1].color)
+                .css("cursor", "pointer")
+                .attr("id", "mutation_row_cluster " + (dataIndex + 1).toString())
+            }};
+
+          this._refresh();
+        },
+
+        _refresh: function() {
+          this.element.context.innerHTML = this._elements.cluster_table.outerHTML;
+          this._elements.cluster_datatable = $("#cluster_table").DataTable(this._elements.table_data);
+          $("#cluster_table tbody").on("click", "tr", this.toggle_mutations(this));
+          let search_input = $(".dataTables_filter input");
+          search_input.unbind().bind("keyup", function(e) {
+            if (search_input.val().length === 0) {
+              for (let c in this.options.cluster_dict) {
+                this.hide_mutations(c);
+              }
+            } else if (e.keyCode === 13) {
+              for (let c in this.options.cluster_dict) {
+                let cluster_table = this.show_mutations(c);
+                cluster_table.search(search_input.val()).draw();
+                if (cluster_table.page.info().recordsDisplay === 0) {
+                  this.hide_mutations(c);
+                }
+              }
+            }
+          }
+          .bind(this));
+        },
+
+        toggle_mutations: function(widg) {
+          return function() {
+            let row = widg._elements.cluster_datatable.row($(this));
+            if (row.data()) {
+              if (row.child.isShown()) {
+                row.child.hide();
+              } else {
+                let c = row.data().Cluster,
+                  cluster_muts = widg.options.cluster_dict[c].muts,
+                  cluster_cnvs = widg.options.cluster_dict[c].cnvs,
+                  drivers = widg.options.cluster_dict[c].drivers,
+                  color = widg.options.cluster_dict[c].color,
+                  aliases = widg.options.aliases,
+                  mut_data = [];
+                for (let mut in cluster_muts) {
+                  let mut_dat = {"is_driver": drivers.includes(mut) ? 0 : 1,
+                    "Cluster": mut,
+                    "Chromosome": cluster_muts[mut].chrom,
+                    "Position": cluster_muts[mut].pos
+                  };
+                  for (let i in aliases) {
+                    mut_dat[aliases[i] + " CCF"] = cluster_muts[mut].ccf_hat[i] +
+                      (" (" + cluster_muts[mut].alt_cnt[i] + ":" + cluster_muts[mut].ref_cnt[i] + ")");
+                  }
+                  mut_data.push(mut_dat);
+                }
+                for (let cnv in cluster_cnvs) {
+                  let cnv_dat = {"is_driver": 1,
+                    "Cluster": cnv,
+                    "Chromosome": cluster_cnvs[cnv].chrom,
+                    "Position": null
+                  };
+                  for (let i in aliases) {
+                    cnv_dat[aliases[i] + " CCF"] = cluster_cnvs[cnv].ccf_hat[i];
+                  }
+                  mut_data.push(cnv_dat);
+                }
+                row.child("<table id=\"cluster_" + row.data().Cluster + "_table\" class=\"hover\"></table>").show();
+                $("#cluster_" + row.data().Cluster + "_table").DataTable({
+                  "columns": [{"data": "is_driver", "visible": false}].concat(widg._elements.column_data),
+                  "data": mut_data,
+                  "autoWidth": false,
+                  "order": [[0, "asc"]],
+                  "paging": false,
+                  "scrollY": 320,
+                  "scrollCollapse": true,
+                  "createdRow": function(row, data) {
+                    $(row).css("color", color);
+                    if (data.is_driver === 0) {
+                      $(row).css("font-weight", "bold");
+                    }
+                  }
+                });
+              }
+            }
+          }
+        },
+
+        show_mutations: function(cluster) {
+          let row = this._elements.cluster_datatable.row(cluster - 1),
+            cluster_table;
+          if (~row.child.isShown()) {
+            let cluster_muts = this.options.cluster_dict[cluster].muts,
+              drivers = this.options.cluster_dict[cluster].drivers,
+              color = this.options.cluster_dict[cluster].color,
+              aliases = this.options.aliases,
+              mut_data = [];
+            for (let mut in cluster_muts) {
+              let mut_dat = {"is_driver": drivers.includes(mut) ? 0 : 1,
+                  "Cluster": mut,
+                  "Chromosome": cluster_muts[mut].chrom,
+                  "Position": cluster_muts[mut].pos
+                },
+                is_cnv = mut.startsWith("gain") || mut.startsWith("loss") || mut.startsWith("homdel") || mut === "WGD";
+              for (let i in aliases) {
+                mut_dat[aliases[i] + " CCF"] = cluster_muts[mut].ccf_hat[i] +
+                  (is_cnv ? "" : " (" + cluster_muts[mut].alt_cnt[i] + ":" + cluster_muts[mut].ref_cnt[i] + ")");
+              }
+              mut_data.push(mut_dat);
+            }
+            row.child("<table id=\"cluster_" + cluster.toString() + "_table\" class=\"hover\"></table>").show();
+            cluster_table = $("#cluster_" + cluster.toString() + "_table").DataTable({
+              "columns": [{"data": "is_driver", "visible": false}].concat(this._elements.column_data),
+              "data": mut_data,
+              "autoWidth": false,
+              "order": [[0, "asc"]],
+              "paging": false,
+              "scrollY": 320,
+              "scrollCollapse": true,
+              "createdRow": function(row, data) {
+                $(row).css("color", color);
+                if (data.is_driver === 0) {
+                  $(row).css("font-weight", "bold");
+                }
+              }
+            });
+          } else {
+            cluster_table = row.child.DataTable();
+          }
+          return cluster_table;
+        },
+
+        hide_mutations: function(cluster) {
+          this._elements.cluster_datatable.row(cluster - 1).child.hide();
+        },
+
+        download_as_tsv: function() {
+          let aliases = this.options.aliases,
+            cluster_dict = this.options.cluster_dict,
+            columns = ["Cluster", "Mutation", "Driver", "Chromosome", "Position", ...aliases.map(d => d + " CCF")],
+            dl_link = "data:text/plain;charset=utf-8,";
+          
+          let is_driver = function(mut, drivers) {
+            if (mut.startsWith("gain") || mut.startsWith("loss") || mut.startsWith("homdel") || mut === "WGD") {
+              return null
+            }
+            return drivers.includes(mut)
+          };
+
+          dl_link += columns.join("\t") + "\n";
+          for (let c in cluster_dict) {
+            let cluster_row = [c, null, null, null, null, ...aliases.map(
+              (_, i) => cluster_dict[c].ccf_hat[i]
+                + " (" + cluster_dict[c].ccf_low[i]
+                + "-" + cluster_dict[c].ccf_high[i] + ")")];
+            dl_link += cluster_row.join("\t") + "\n";
+            let cluster_muts = cluster_dict[c].muts,
+              drivers = cluster_dict[c].drivers,
+              mut_rows = Object.keys(cluster_muts).map(
+                d => [c, d, is_driver(d, drivers), cluster_muts[d].chrom, cluster_muts[d].pos,
+                  ...aliases.map((_, i) => cluster_muts[d].ccf_hat[i] + " ("
+                    + cluster_muts[d].alt_cnt[i] + ":"
+                    + cluster_muts[d].ref_cnt[i] + ")"
+                  )
+                ].join("\t")
+              );
+            dl_link += mut_rows.join("\n") + "\n"
+          }
+
+          let dl = document.createElement("a");
+          document.body.appendChild(dl);
+          dl.setAttribute("href", dl_link);
+          dl.setAttribute("download", "patient1" + ".cluster_table.tsv");
+          dl.click();
+
+        }
+
+      });
+
+      $("#cluster-table").cluster_table({"cluster_dict": {"1": {"ccf_hat": [1.0, 1.0, 1.0], "tumor_abundance": [1.0, 1.0, 1.0], "ccf_high": [1.0, 1.0, 1.0], "color": "rgb(39,140,24)", "drivers": ["MTOR_None"], "ccf_low": [1.0, 1.0, 1.0], "muts": {"C19orf57_None": {"ref_cnt": ["102", "111", "120"], "ccf_hat": [0.92, 0.93, 0.92], "alt_cnt": ["39", "30", "52"], "chrom": "19", "pos": "14000618"}, "TREX2_None": {"ref_cnt": ["84", "89", "53"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["67", "44", "80"], "chrom": "23", "pos": "152710812"}, "MORF4L1_None": {"ref_cnt": ["76", "91", "63"], "ccf_hat": [0.98, 0.96, 0.98], "alt_cnt": ["42", "28", "56"], "chrom": "15", "pos": "79184620"}, "FMNL3_None": {"ref_cnt": ["76", "97", "68"], "ccf_hat": [0.98, 0.91, 0.96], "alt_cnt": ["45", "24", "53"], "chrom": "12", "pos": "50042824"}, "RP11-144G6.4_None": {"ref_cnt": ["74", "87", "63"], "ccf_hat": [0.98, 0.97, 0.98], "alt_cnt": ["46", "32", "57"], "chrom": "10", "pos": "47192168"}, "NHSL2_None": {"ref_cnt": ["109", "104", "85"], "ccf_hat": [0.93, 0.94, 0.99], "alt_cnt": ["42", "29", "68"], "chrom": "23", "pos": "71358975"}, "FREM2_None": {"ref_cnt": ["82", "101", "69"], "ccf_hat": [0.94, 0.71, 0.99], "alt_cnt": ["37", "18", "91"], "chrom": "13", "pos": "39424226"}, "CACNA1H_None": {"ref_cnt": ["37", "64", "18"], "ccf_hat": [0.98, 0.97, 0.94], "alt_cnt": ["42", "29", "48"], "chrom": "16", "pos": "1267980"}, "TCEAL7_None": {"ref_cnt": ["107", "104", "72"], "ccf_hat": [0.95, 0.94, 0.98], "alt_cnt": ["43", "29", "60"], "chrom": "23", "pos": "102586451"}, "CBFA2T2_None": {"ref_cnt": ["85", "99", "62"], "ccf_hat": [0.91, 0.8, 0.98], "alt_cnt": ["35", "20", "58"], "chrom": "20", "pos": "32232338"}, "MTOR_None": {"ref_cnt": ["32", "59", "16"], "ccf_hat": [0.98, 0.98, 0.96], "alt_cnt": ["47", "34", "50"], "chrom": "1", "pos": "11190680"}, "SNX29P2_None": {"ref_cnt": ["36", "70", "12"], "ccf_hat": [0.98, 0.95, 0.98], "alt_cnt": ["42", "23", "54"], "chrom": "16", "pos": "29393068"}, "METTL2A_None": {"ref_cnt": ["87", "93", "73"], "ccf_hat": [0.85, 0.94, 0.92], "alt_cnt": ["32", "26", "47"], "chrom": "17", "pos": "60501595"}, "GPR133_None": {"ref_cnt": ["77", "97", "63"], "ccf_hat": [0.95, 0.6, 0.92], "alt_cnt": ["38", "15", "48"], "chrom": "12", "pos": "131620700"}, "TRO_None": {"ref_cnt": ["85", "84", "88"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["66", "49", "65"], "chrom": "23", "pos": "54949804"}}, "line_width": 7.0, "cnvs": {}}, "2": {"ccf_hat": [1.0, 1.0, 0.23], "tumor_abundance": [0.99, 0.99, 0.0], "ccf_high": [1.0, 1.0, 0.28], "color": "rgb(103,200,243)", "drivers": [], "ccf_low": [1.0, 1.0, 0.21], "muts": {"L3MBTL1_None": {"ref_cnt": ["114", "117", "114"], "ccf_hat": [0.98, 0.92, 0.34], "alt_cnt": ["50", "28", "19"], "chrom": "20", "pos": "42143973"}, "CACNA1C_None": {"ref_cnt": ["82", "92", "108"], "ccf_hat": [0.95, 0.96, 0.25], "alt_cnt": ["38", "28", "12"], "chrom": "12", "pos": "2224416"}, "CLCN3_None": {"ref_cnt": ["80", "90", "106"], "ccf_hat": [0.97, 0.97, 0.31], "alt_cnt": ["40", "30", "15"], "chrom": "4", "pos": "170618648"}, "DNAH9_None": {"ref_cnt": ["79", "93", "104"], "ccf_hat": [0.97, 0.96, 0.35], "alt_cnt": ["41", "28", "17"], "chrom": "17", "pos": "11786979"}, "TEAD2_None": {"ref_cnt": ["112", "120", "158"], "ccf_hat": [0.74, 0.73, 0.28], "alt_cnt": ["29", "19", "14"], "chrom": "19", "pos": "49846623"}, "SNAP25-AS1_None": {"ref_cnt": ["84", "99", "111"], "ccf_hat": [0.92, 0.86, 0.19], "alt_cnt": ["36", "22", "10"], "chrom": "20", "pos": "10258368"}, "ADAM12_None": {"ref_cnt": ["74", "96", "108"], "ccf_hat": [0.98, 0.92, 0.25], "alt_cnt": ["46", "25", "12"], "chrom": "10", "pos": "127806625"}, "GABRA4_None": {"ref_cnt": ["80", "96", "105"], "ccf_hat": [0.95, 0.91, 0.3], "alt_cnt": ["38", "24", "14"], "chrom": "4", "pos": "46994934"}, "LZTS2_None": {"ref_cnt": ["77", "92", "105"], "ccf_hat": [0.98, 0.96, 0.32], "alt_cnt": ["43", "28", "15"], "chrom": "10", "pos": "102766269"}, "RANBP6_None": {"ref_cnt": ["87", "97", "101"], "ccf_hat": [0.86, 0.89, 0.4], "alt_cnt": ["33", "23", "19"], "chrom": "9", "pos": "6014284"}, "RGS20_None": {"ref_cnt": ["78", "95", "69"], "ccf_hat": [0.98, 0.94, 0.25], "alt_cnt": ["42", "26", "11"], "chrom": "8", "pos": "54764473"}, "CPNE8_None": {"ref_cnt": ["68", "89", "115"], "ccf_hat": [0.99, 0.97, 0.1], "alt_cnt": ["52", "30", "6"], "chrom": "12", "pos": "39047810"}, "DPH2_None": {"ref_cnt": ["46", "76", "55"], "ccf_hat": [0.81, 0.87, 0.27], "alt_cnt": ["32", "17", "11"], "chrom": "1", "pos": "44436272"}, "ZNF675_None": {"ref_cnt": ["104", "115", "161"], "ccf_hat": [0.91, 0.85, 0.22], "alt_cnt": ["38", "25", "11"], "chrom": "19", "pos": "23837467"}, "TROAP_None": {"ref_cnt": ["83", "98", "109"], "ccf_hat": [0.95, 0.9, 0.22], "alt_cnt": ["38", "24", "11"], "chrom": "12", "pos": "49723678"}, "FN1_None": {"ref_cnt": ["81", "95", "79"], "ccf_hat": [0.95, 0.9, 0.24], "alt_cnt": ["38", "23", "21"], "chrom": "2", "pos": "216279555"}, "CNTD1_None": {"ref_cnt": ["83", "92", "106"], "ccf_hat": [0.94, 0.96, 0.3], "alt_cnt": ["37", "28", "14"], "chrom": "17", "pos": "40958783"}}, "line_width": 8.0, "cnvs": {}}, "3": {"ccf_hat": [0.68, 0.4, 0.09], "tumor_abundance": [0.69, 0.43, 0.0], "ccf_high": [0.69, 0.43, 0.09], "color": "rgb(248,139,16)", "drivers": [], "ccf_low": [0.67, 0.37, 0.09], "muts": {"PCNXL2_None": {"ref_cnt": ["46", "85", "56"], "ccf_hat": [0.81, 0.41, 0.24], "alt_cnt": ["32", "8", "10"], "chrom": "1", "pos": "233394701"}, "PIPOX_None": {"ref_cnt": ["97", "112", "115"], "ccf_hat": [0.61, 0.38, 0.08], "alt_cnt": ["21", "8", "4"], "chrom": "17", "pos": "27372016"}, "FRRS1L_None": {"ref_cnt": ["128", "138", "166"], "ccf_hat": [0.86, 0.32, 0.19], "alt_cnt": ["35", "7", "10"], "chrom": "9", "pos": "111903657"}, "MPRIP_None": {"ref_cnt": ["101", "116", "119"], "ccf_hat": [0.57, 0.27, 0.04], "alt_cnt": ["20", "5", "1"], "chrom": "17", "pos": "17050651"}, "EMX2_None": {"ref_cnt": ["88", "111", "107"], "ccf_hat": [0.84, 0.41, 0.27], "alt_cnt": ["32", "9", "13"], "chrom": "10", "pos": "119307662"}, "GK2_None": {"ref_cnt": ["88", "109", "106"], "ccf_hat": [0.84, 0.47, 0.3], "alt_cnt": ["32", "11", "14"], "chrom": "4", "pos": "80328130"}, "DNAJC13_None": {"ref_cnt": ["57", "82", "61"], "ccf_hat": [0.67, 0.49, 0.09], "alt_cnt": ["22", "10", "5"], "chrom": "3", "pos": "132176120"}, "USP15_None": {"ref_cnt": ["93", "113", "107"], "ccf_hat": [0.75, 0.41, 0.27], "alt_cnt": ["28", "9", "13"], "chrom": "12", "pos": "62743075"}, "FBP2_None": {"ref_cnt": ["146", "143", "174"], "ccf_hat": [0.35, 0.27, 0.04], "alt_cnt": ["15", "6", "1"], "chrom": "9", "pos": "97333853"}, "BOP1_None": {"ref_cnt": ["103", "106", "75"], "ccf_hat": [0.43, 0.52, 0.07], "alt_cnt": ["16", "13", "4"], "chrom": "8", "pos": "145515007"}, "CDC7_None": {"ref_cnt": ["63", "88", "60"], "ccf_hat": [0.51, 0.29, 0.11], "alt_cnt": ["16", "5", "6"], "chrom": "1", "pos": "91978846"}, "SLC22A13_None": {"ref_cnt": ["58", "88", "64"], "ccf_hat": [0.66, 0.29, 0.05], "alt_cnt": ["21", "5", "2"], "chrom": "3", "pos": "38318557"}, "ZSCAN20_None": {"ref_cnt": ["43", "82", "58"], "ccf_hat": [0.9, 0.54, 0.18], "alt_cnt": ["35", "11", "8"], "chrom": "1", "pos": "33945050"}, "LZIC_None": {"ref_cnt": ["61", "86", "65"], "ccf_hat": [0.56, 0.41, 0.04], "alt_cnt": ["17", "8", "1"], "chrom": "1", "pos": "9996650"}, "SORCS1_None": {"ref_cnt": ["84", "105", "114"], "ccf_hat": [0.93, 0.54, 0.11], "alt_cnt": ["37", "14", "7"], "chrom": "10", "pos": "108338950"}}, "line_width": 7.0, "cnvs": {}}, "4": {"ccf_hat": [0.01, 0.01, 1.0], "tumor_abundance": [0.01, 0.01, 1.0], "ccf_high": [0.01, 0.01, 1.0], "color": "rgb(16,49,41)", "drivers": ["TP53_None"], "ccf_low": [0.01, 0.01, 1.0], "muts": {"C3_None": {"ref_cnt": ["142", "139", "130"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "43"], "chrom": "19", "pos": "6714393"}, "MBTPS2_None": {"ref_cnt": ["151", "133", "110"], "ccf_hat": [0.02, 0.04, 0.78], "alt_cnt": ["0", "0", "43"], "chrom": "23", "pos": "21875555"}, "RP11-766F14.2_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "4", "pos": "100572683"}, "NEDD4L_None": {"ref_cnt": ["160", "146", "86"], "ccf_hat": [0.02, 0.04, 0.9], "alt_cnt": ["0", "0", "46"], "chrom": "18", "pos": "55997995"}, "TP53_None": {"ref_cnt": ["120", "118", "81"], "ccf_hat": [0.02, 0.04, 0.77], "alt_cnt": ["0", "0", "38"], "chrom": "17", "pos": "7578190"}, "USP43_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "17", "pos": "9603498"}, "BICC1_None": {"ref_cnt": ["118", "122", "79"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "41"], "chrom": "10", "pos": "60549075"}, "TLN2_None": {"ref_cnt": ["120", "120", "74"], "ccf_hat": [0.02, 0.04, 0.91], "alt_cnt": ["0", "0", "46"], "chrom": "15", "pos": "63112738"}, "SLC22A12_None": {"ref_cnt": ["79", "92", "30"], "ccf_hat": [0.03, 0.05, 0.75], "alt_cnt": ["0", "0", "35"], "chrom": "11", "pos": "64366049"}, "DOCK9_None": {"ref_cnt": ["119", "120", "83"], "ccf_hat": [0.02, 0.04, 0.99], "alt_cnt": ["0", "0", "76"], "chrom": "13", "pos": "99515321"}, "OR2L13_None": {"ref_cnt": ["78", "93", "23"], "ccf_hat": [0.03, 0.05, 0.87], "alt_cnt": ["0", "0", "43"], "chrom": "1", "pos": "248185331"}}, "line_width": 5.0, "cnvs": {}}, "5": {"ccf_hat": [0.14, 0.32, 0.2], "tumor_abundance": [0.14, 0.3, 0.0], "ccf_high": [0.17, 0.37, 0.34], "color": "rgb(93,119,254)", "drivers": ["MED23_None"], "ccf_low": [0.12, 0.27, 0.09], "muts": {"PATL2_None": {"ref_cnt": ["112", "116", "111"], "ccf_hat": [0.21, 0.27, 0.16], "alt_cnt": ["7", "5", "9"], "chrom": "15", "pos": "44965480"}, "TOP3A_None": {"ref_cnt": ["117", "113", "104"], "ccf_hat": [0.11, 0.35, 0.32], "alt_cnt": ["3", "7", "15"], "chrom": "17", "pos": "18218028"}, "SMIM20_None": {"ref_cnt": ["114", "110", "110"], "ccf_hat": [0.21, 0.38, 0.14], "alt_cnt": ["7", "8", "8"], "chrom": "4", "pos": "25916019"}, "TNC_None": {"ref_cnt": ["156", "141", "169"], "ccf_hat": [0.18, 0.31, 0.14], "alt_cnt": ["6", "7", "8"], "chrom": "9", "pos": "117825247"}, "SALL4_None": {"ref_cnt": ["112", "112", "109"], "ccf_hat": [0.23, 0.35, 0.22], "alt_cnt": ["8", "7", "11"], "chrom": "20", "pos": "50400965"}, "BAAT_None": {"ref_cnt": ["156", "137", "162"], "ccf_hat": [0.18, 0.42, 0.24], "alt_cnt": ["6", "11", "12"], "chrom": "9", "pos": "104133603"}, "TMEM184B_None": {"ref_cnt": ["73", "85", "53"], "ccf_hat": [0.19, 0.41, 0.31], "alt_cnt": ["5", "8", "13"], "chrom": "22", "pos": "38642056"}, "OR4E2_None": {"ref_cnt": ["119", "111", "112"], "ccf_hat": [0.06, 0.41, 0.13], "alt_cnt": ["1", "9", "8"], "chrom": "14", "pos": "22133786"}, "MARK3_None": {"ref_cnt": ["161", "142", "166"], "ccf_hat": [0.1, 0.16, 0.16], "alt_cnt": ["3", "3", "9"], "chrom": "14", "pos": "103934398"}, "MAP4_None": {"ref_cnt": ["75", "88", "53"], "ccf_hat": [0.13, 0.29, 0.31], "alt_cnt": ["3", "5", "13"], "chrom": "3", "pos": "47933834"}, "RP11-983P16.4_None": {"ref_cnt": ["113", "111", "110"], "ccf_hat": [0.21, 0.35, 0.19], "alt_cnt": ["7", "7", "10"], "chrom": "12", "pos": "53448131"}, "RAB11FIP5_None": {"ref_cnt": ["116", "118", "86"], "ccf_hat": [0.11, 0.14, 0.2], "alt_cnt": ["3", "2", "14"], "chrom": "2", "pos": "73308135"}, "MED23_None": {"ref_cnt": ["96", "106", "108"], "ccf_hat": [0.09, 0.42, 0.15], "alt_cnt": ["3", "9", "8"], "chrom": "6", "pos": "131908818"}}, "line_width": 6.0, "cnvs": {}}, "6": {"ccf_hat": [0.01, 0.01, 0.44], "tumor_abundance": [0.01, 0.01, 0.43], "ccf_high": [0.01, 0.01, 0.47], "color": "rgb(152,22,26)", "drivers": [], "ccf_low": [0.01, 0.01, 0.4], "muts": {"FGD2_None": {"ref_cnt": ["100", "114", "98"], "ccf_hat": [0.01, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "6", "pos": "36993628"}, "ARHGAP21_None": {"ref_cnt": ["120", "120", "91"], "ccf_hat": [0.02, 0.04, 0.6], "alt_cnt": ["0", "0", "29"], "chrom": "10", "pos": "24923955"}, "LIN9_None": {"ref_cnt": ["79", "92", "42"], "ccf_hat": [0.03, 0.05, 0.56], "alt_cnt": ["0", "0", "24"], "chrom": "1", "pos": "226488883"}, "IFNA2_None": {"ref_cnt": ["120", "120", "105"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "15"], "chrom": "9", "pos": "21385148"}, "SYTL1_None": {"ref_cnt": ["78", "94", "45"], "ccf_hat": [0.03, 0.05, 0.51], "alt_cnt": ["0", "0", "22"], "chrom": "1", "pos": "27677959"}, "NRAP_None": {"ref_cnt": ["120", "121", "104"], "ccf_hat": [0.02, 0.04, 0.34], "alt_cnt": ["0", "0", "16"], "chrom": "10", "pos": "115356883"}, "PYROXD2_None": {"ref_cnt": ["119", "121", "100"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "10", "pos": "100174813"}, "MTR_None": {"ref_cnt": ["77", "93", "46"], "ccf_hat": [0.03, 0.05, 0.49], "alt_cnt": ["0", "0", "21"], "chrom": "1", "pos": "236998929"}, "CCDC159_None": {"ref_cnt": ["140", "140", "148"], "ccf_hat": [0.02, 0.04, 0.47], "alt_cnt": ["0", "0", "24"], "chrom": "19", "pos": "11461587"}, "TNFAIP2_None": {"ref_cnt": ["161", "145", "154"], "ccf_hat": [0.02, 0.04, 0.38], "alt_cnt": ["0", "0", "19"], "chrom": "14", "pos": "103599771"}, "CHST10_None": {"ref_cnt": ["120", "120", "77"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "23"], "chrom": "2", "pos": "101009835"}, "EIF2AK2_None": {"ref_cnt": ["119", "120", "80"], "ccf_hat": [0.02, 0.04, 0.22], "alt_cnt": ["0", "0", "20"], "chrom": "2", "pos": "37374908"}, "NCKAP1L_None": {"ref_cnt": ["120", "121", "92"], "ccf_hat": [0.02, 0.04, 0.58], "alt_cnt": ["0", "0", "28"], "chrom": "12", "pos": "54913049"}, "ZNF543_None": {"ref_cnt": ["141", "141", "151"], "ccf_hat": [0.02, 0.04, 0.4], "alt_cnt": ["0", "0", "20"], "chrom": "19", "pos": "57839590"}, "SPTB_None": {"ref_cnt": ["163", "146", "156"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "16"], "chrom": "14", "pos": "65249071"}}, "line_width": 7.0, "cnvs": {}}}, "aliases": ["T0", "T1", "T2"]})
+    });
+  </script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.mutation_plot", {
+        options: {
+          xlabels: [],
+          cluster_dict: {1: {ccf_hat: [0], ccf_high: [0], ccf_low: [0], line_width: 0, color: "green", drivers: []}},
+          width: 500,
+          height: 400,
+          margins: {top: 20, right: 30, bottom: 35, left: 40}
+        },
+
+        _elements: {
+          mutation_plot: undefined
+        },
+
+        _create: function() {
+          const xlabels = this.options.xlabels,
+            cluster_dict = this.options.cluster_dict,
+            width = this.options.width,
+            height = this.options.height,
+            margins = this.options.margins;
+
+          if (xlabels.length > 1) {
+            let x = d3.scaleLinear()
+              .domain([0, xlabels.length - 1])
+              .range([margins.left, width - margins.right]);
+
+            let y = d3.scaleLinear()
+              .domain([0, 1])
+              .range([height - margins.bottom, margins.top]);
+
+            let xAxis = g => g
+              .attr("transform", "translate(0 " + (height - margins.bottom).toString() + ")")
+              .call(d3.axisBottom(x).tickValues([...Array(xlabels.length).keys()]).tickFormat(d => xlabels[d]));
+
+            let yAxis = g => g
+              .attr("transform", "translate(" + margins.left.toString() + " 0)")
+              .call(d3.axisLeft(y));
+
+            let line = d3.line()
+              .x(d => x(d.x))
+              .y(d => y(d.y));
+
+            let mutation_plot = d3.select(document.createElement("svg"))
+              .attr("baseProfile", "full")
+              .attr("viewBox", "0 0 " + width + " " + height)
+              .style("max-width", "500px")
+              .style("min-width", "300px")
+              .attr("version", "1.1")
+              .attr("xmlns", "http://www.w3.org/2000/svg")
+              .attr("xmlns:ev", "http://www.w3.org/2001/xml-events")
+              .attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
+            mutation_plot.append("g")
+              .call(xAxis);
+            mutation_plot.append("g")
+              .call(yAxis);
+            mutation_plot.append("text")
+              .attr("x", (width + margins.left - margins.right) / 2)
+              .attr("y", height - 5)
+              .style("text-anchor", "middle")
+              .attr("font-size", "10px")
+              .text("Samples");
+            mutation_plot.append("text")
+              .attr("transform", "rotate(-90 10 " + ((height + margins.top - margins.bottom) / 2).toString() + ")")
+              .attr("x", 10)
+              .attr("y", (height + margins.top - margins.bottom) / 2)
+              .style("text-anchor", "middle")
+              .attr("font-size", "10px")
+              .text("CCF(x)");
+            mutation_plot.append("text")
+              .attr("x", width / 2)
+              .attr("y", margins.top / 2)
+              .attr("text-anchor", "middle")
+              .style("font-size", "14px")
+              .style("text-decoration", "underline")
+              .text("Mutation plot");
+
+            for (let cluster in cluster_dict) {
+              let muts = cluster_dict[cluster].muts,
+                color = cluster_dict[cluster].color;
+              for (let mut in muts) {
+                let ccf_hat = muts[mut].ccf_hat,
+                  mutation_data = [];
+                for (let sample in ccf_hat) {
+                  mutation_data.push({
+                    x: sample,
+                    y: ccf_hat[sample]
+                  });
+                }
+                mutation_plot.append("path")
+                  .datum(mutation_data)
+                  .attr("fill", "none")
+                  .attr("stroke", color)
+                  .attr("stroke-width", 3)
+                  .attr("opacity", 0.3)
+                  .attr("d", line);
+              }
+            }
+
+            this._elements.mutation_plot = mutation_plot.node();
+          } else {
+            let max_bin = 0,
+              n_bins;
+            for (let c in cluster_dict) {
+              for (let mut in cluster_dict[c].muts) {
+                max_bin = Math.max(max_bin, ...cluster_dict[c].muts[mut].ccf_dist);
+                n_bins = cluster_dict[c].muts[mut].ccf_dist.length
+              }
+            }
+            let x = d3.scaleLinear()
+              .domain([0, 1])
+              .range([margins.left, width - margins.right]);
+
+            let y = d3.scaleLinear()
+              .domain([0, max_bin]).nice()
+              .range([height - margins.bottom, margins.top]);
+
+            let xAxis = g => g
+              .attr("transform", "translate(0 " + (height - margins.bottom).toString() + ")")
+              .call(d3.axisBottom(x));
+
+            let yAxis = g => g
+              .attr("transform", "translate(" + margins.left.toString() + " 0)")
+              .call(d3.axisLeft(y));
+
+            let plot_1d = d3.select(document.createElement("svg"))
+              .attr("baseProfile", "full")
+              .attr("viewBox", "0 0 " + width + " " + height)
+              .style("max-width", "500px")
+              .style("min-width", "300px")
+              .attr("version", "1.1")
+              .attr("xmlns", "http://www.w3.org/2000/svg")
+              .attr("xmlns:ev", "http://www.w3.org/2001/xml-events")
+              .attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
+            plot_1d.append("g")
+              .call(xAxis);
+            plot_1d.append("g")
+              .call(yAxis);
+            plot_1d.append("text")
+              .attr("x", (width + margins.left - margins.right) / 2)
+              .attr("y", height - 5)
+              .style("text-anchor", "middle")
+              .attr("font-size", "10px")
+              .text("CCF(x)");
+            plot_1d.append("text")
+              .attr("transform", "rotate(-90 10 " + ((height + margins.top - margins.bottom) / 2).toString() + ")")
+              .attr("x", 10)
+              .attr("y", (height + margins.top - margins.bottom) / 2)
+              .style("text-anchor", "middle")
+              .attr("font-size", "10px")
+              .text("Probability density");
+
+            let zero_str = Array(n_bins).fill(0).reduce(
+              (a, c, i) => a + " " + x((n_bins - i - 1) / (n_bins - 1)).toString() + "," + y(0).toString(), " "
+            );
+
+            for (let c in cluster_dict) {
+              plot_1d.append("g")
+                .selectAll("polygon")
+                .data(Object.keys(cluster_dict[c].muts))
+                .join("polygon")
+                .attr("fill", cluster_dict[c].color)
+                .attr("opacity", 0.05)
+                .attr("stroke", "none")
+                .attr("points", d =>
+                  cluster_dict[c].muts[d].ccf_dist.reduce(
+                    (a, c, i) => a + " " + x(i / (n_bins - 1)).toString() + "," + y(c).toString(), ""
+                  ) + zero_str
+                );
+            }
+
+            plot_1d.append("text")
+              .attr("x", width / 2)
+              .attr("y", margins.top / 2)
+              .attr("text-anchor", "middle")
+              .style("font-size", "14px")
+              .style("text-decoration", "underline")
+              .text("Mutation plot");
+
+            this._elements.mutation_plot = plot_1d.node()
+          }
+
+          this._refresh();
+
+        },
+
+        _refresh: function() {
+          this.element.context.innerHTML = this._elements.mutation_plot.outerHTML;
+        },
+
+        download: function() {
+          let dl_link = "data:text/plain;charset=utf-8," + encodeURIComponent(this._elements.mutation_plot.outerHTML),
+            dl = document.createElement("a");
+          document.body.appendChild(dl);
+          dl.setAttribute("href", dl_link);
+          dl.setAttribute("download", "patient1" + ".mutation_plot.svg");
+          dl.click();
+        },
+
+        _destroy: function() {
+          this.element.context.innerHTML = ""
+        }
+      });
+
+      $("#mutation-plot").mutation_plot({"cluster_dict": {"1": {"ccf_hat": [1.0, 1.0, 1.0], "tumor_abundance": [1.0, 1.0, 1.0], "ccf_high": [1.0, 1.0, 1.0], "color": "rgb(39,140,24)", "drivers": ["MTOR_None"], "ccf_low": [1.0, 1.0, 1.0], "muts": {"C19orf57_None": {"ref_cnt": ["102", "111", "120"], "ccf_hat": [0.92, 0.93, 0.92], "alt_cnt": ["39", "30", "52"], "chrom": "19", "pos": "14000618"}, "TREX2_None": {"ref_cnt": ["84", "89", "53"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["67", "44", "80"], "chrom": "23", "pos": "152710812"}, "MORF4L1_None": {"ref_cnt": ["76", "91", "63"], "ccf_hat": [0.98, 0.96, 0.98], "alt_cnt": ["42", "28", "56"], "chrom": "15", "pos": "79184620"}, "FMNL3_None": {"ref_cnt": ["76", "97", "68"], "ccf_hat": [0.98, 0.91, 0.96], "alt_cnt": ["45", "24", "53"], "chrom": "12", "pos": "50042824"}, "RP11-144G6.4_None": {"ref_cnt": ["74", "87", "63"], "ccf_hat": [0.98, 0.97, 0.98], "alt_cnt": ["46", "32", "57"], "chrom": "10", "pos": "47192168"}, "NHSL2_None": {"ref_cnt": ["109", "104", "85"], "ccf_hat": [0.93, 0.94, 0.99], "alt_cnt": ["42", "29", "68"], "chrom": "23", "pos": "71358975"}, "FREM2_None": {"ref_cnt": ["82", "101", "69"], "ccf_hat": [0.94, 0.71, 0.99], "alt_cnt": ["37", "18", "91"], "chrom": "13", "pos": "39424226"}, "CACNA1H_None": {"ref_cnt": ["37", "64", "18"], "ccf_hat": [0.98, 0.97, 0.94], "alt_cnt": ["42", "29", "48"], "chrom": "16", "pos": "1267980"}, "TCEAL7_None": {"ref_cnt": ["107", "104", "72"], "ccf_hat": [0.95, 0.94, 0.98], "alt_cnt": ["43", "29", "60"], "chrom": "23", "pos": "102586451"}, "CBFA2T2_None": {"ref_cnt": ["85", "99", "62"], "ccf_hat": [0.91, 0.8, 0.98], "alt_cnt": ["35", "20", "58"], "chrom": "20", "pos": "32232338"}, "MTOR_None": {"ref_cnt": ["32", "59", "16"], "ccf_hat": [0.98, 0.98, 0.96], "alt_cnt": ["47", "34", "50"], "chrom": "1", "pos": "11190680"}, "SNX29P2_None": {"ref_cnt": ["36", "70", "12"], "ccf_hat": [0.98, 0.95, 0.98], "alt_cnt": ["42", "23", "54"], "chrom": "16", "pos": "29393068"}, "METTL2A_None": {"ref_cnt": ["87", "93", "73"], "ccf_hat": [0.85, 0.94, 0.92], "alt_cnt": ["32", "26", "47"], "chrom": "17", "pos": "60501595"}, "GPR133_None": {"ref_cnt": ["77", "97", "63"], "ccf_hat": [0.95, 0.6, 0.92], "alt_cnt": ["38", "15", "48"], "chrom": "12", "pos": "131620700"}, "TRO_None": {"ref_cnt": ["85", "84", "88"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["66", "49", "65"], "chrom": "23", "pos": "54949804"}}, "line_width": 7.0, "cnvs": {}}, "2": {"ccf_hat": [1.0, 1.0, 0.23], "tumor_abundance": [0.99, 0.99, 0.0], "ccf_high": [1.0, 1.0, 0.28], "color": "rgb(103,200,243)", "drivers": [], "ccf_low": [1.0, 1.0, 0.21], "muts": {"L3MBTL1_None": {"ref_cnt": ["114", "117", "114"], "ccf_hat": [0.98, 0.92, 0.34], "alt_cnt": ["50", "28", "19"], "chrom": "20", "pos": "42143973"}, "CACNA1C_None": {"ref_cnt": ["82", "92", "108"], "ccf_hat": [0.95, 0.96, 0.25], "alt_cnt": ["38", "28", "12"], "chrom": "12", "pos": "2224416"}, "CLCN3_None": {"ref_cnt": ["80", "90", "106"], "ccf_hat": [0.97, 0.97, 0.31], "alt_cnt": ["40", "30", "15"], "chrom": "4", "pos": "170618648"}, "DNAH9_None": {"ref_cnt": ["79", "93", "104"], "ccf_hat": [0.97, 0.96, 0.35], "alt_cnt": ["41", "28", "17"], "chrom": "17", "pos": "11786979"}, "TEAD2_None": {"ref_cnt": ["112", "120", "158"], "ccf_hat": [0.74, 0.73, 0.28], "alt_cnt": ["29", "19", "14"], "chrom": "19", "pos": "49846623"}, "SNAP25-AS1_None": {"ref_cnt": ["84", "99", "111"], "ccf_hat": [0.92, 0.86, 0.19], "alt_cnt": ["36", "22", "10"], "chrom": "20", "pos": "10258368"}, "ADAM12_None": {"ref_cnt": ["74", "96", "108"], "ccf_hat": [0.98, 0.92, 0.25], "alt_cnt": ["46", "25", "12"], "chrom": "10", "pos": "127806625"}, "GABRA4_None": {"ref_cnt": ["80", "96", "105"], "ccf_hat": [0.95, 0.91, 0.3], "alt_cnt": ["38", "24", "14"], "chrom": "4", "pos": "46994934"}, "LZTS2_None": {"ref_cnt": ["77", "92", "105"], "ccf_hat": [0.98, 0.96, 0.32], "alt_cnt": ["43", "28", "15"], "chrom": "10", "pos": "102766269"}, "RANBP6_None": {"ref_cnt": ["87", "97", "101"], "ccf_hat": [0.86, 0.89, 0.4], "alt_cnt": ["33", "23", "19"], "chrom": "9", "pos": "6014284"}, "RGS20_None": {"ref_cnt": ["78", "95", "69"], "ccf_hat": [0.98, 0.94, 0.25], "alt_cnt": ["42", "26", "11"], "chrom": "8", "pos": "54764473"}, "CPNE8_None": {"ref_cnt": ["68", "89", "115"], "ccf_hat": [0.99, 0.97, 0.1], "alt_cnt": ["52", "30", "6"], "chrom": "12", "pos": "39047810"}, "DPH2_None": {"ref_cnt": ["46", "76", "55"], "ccf_hat": [0.81, 0.87, 0.27], "alt_cnt": ["32", "17", "11"], "chrom": "1", "pos": "44436272"}, "ZNF675_None": {"ref_cnt": ["104", "115", "161"], "ccf_hat": [0.91, 0.85, 0.22], "alt_cnt": ["38", "25", "11"], "chrom": "19", "pos": "23837467"}, "TROAP_None": {"ref_cnt": ["83", "98", "109"], "ccf_hat": [0.95, 0.9, 0.22], "alt_cnt": ["38", "24", "11"], "chrom": "12", "pos": "49723678"}, "FN1_None": {"ref_cnt": ["81", "95", "79"], "ccf_hat": [0.95, 0.9, 0.24], "alt_cnt": ["38", "23", "21"], "chrom": "2", "pos": "216279555"}, "CNTD1_None": {"ref_cnt": ["83", "92", "106"], "ccf_hat": [0.94, 0.96, 0.3], "alt_cnt": ["37", "28", "14"], "chrom": "17", "pos": "40958783"}}, "line_width": 8.0, "cnvs": {}}, "3": {"ccf_hat": [0.68, 0.4, 0.09], "tumor_abundance": [0.69, 0.43, 0.0], "ccf_high": [0.69, 0.43, 0.09], "color": "rgb(248,139,16)", "drivers": [], "ccf_low": [0.67, 0.37, 0.09], "muts": {"PCNXL2_None": {"ref_cnt": ["46", "85", "56"], "ccf_hat": [0.81, 0.41, 0.24], "alt_cnt": ["32", "8", "10"], "chrom": "1", "pos": "233394701"}, "PIPOX_None": {"ref_cnt": ["97", "112", "115"], "ccf_hat": [0.61, 0.38, 0.08], "alt_cnt": ["21", "8", "4"], "chrom": "17", "pos": "27372016"}, "FRRS1L_None": {"ref_cnt": ["128", "138", "166"], "ccf_hat": [0.86, 0.32, 0.19], "alt_cnt": ["35", "7", "10"], "chrom": "9", "pos": "111903657"}, "MPRIP_None": {"ref_cnt": ["101", "116", "119"], "ccf_hat": [0.57, 0.27, 0.04], "alt_cnt": ["20", "5", "1"], "chrom": "17", "pos": "17050651"}, "EMX2_None": {"ref_cnt": ["88", "111", "107"], "ccf_hat": [0.84, 0.41, 0.27], "alt_cnt": ["32", "9", "13"], "chrom": "10", "pos": "119307662"}, "GK2_None": {"ref_cnt": ["88", "109", "106"], "ccf_hat": [0.84, 0.47, 0.3], "alt_cnt": ["32", "11", "14"], "chrom": "4", "pos": "80328130"}, "DNAJC13_None": {"ref_cnt": ["57", "82", "61"], "ccf_hat": [0.67, 0.49, 0.09], "alt_cnt": ["22", "10", "5"], "chrom": "3", "pos": "132176120"}, "USP15_None": {"ref_cnt": ["93", "113", "107"], "ccf_hat": [0.75, 0.41, 0.27], "alt_cnt": ["28", "9", "13"], "chrom": "12", "pos": "62743075"}, "FBP2_None": {"ref_cnt": ["146", "143", "174"], "ccf_hat": [0.35, 0.27, 0.04], "alt_cnt": ["15", "6", "1"], "chrom": "9", "pos": "97333853"}, "BOP1_None": {"ref_cnt": ["103", "106", "75"], "ccf_hat": [0.43, 0.52, 0.07], "alt_cnt": ["16", "13", "4"], "chrom": "8", "pos": "145515007"}, "CDC7_None": {"ref_cnt": ["63", "88", "60"], "ccf_hat": [0.51, 0.29, 0.11], "alt_cnt": ["16", "5", "6"], "chrom": "1", "pos": "91978846"}, "SLC22A13_None": {"ref_cnt": ["58", "88", "64"], "ccf_hat": [0.66, 0.29, 0.05], "alt_cnt": ["21", "5", "2"], "chrom": "3", "pos": "38318557"}, "ZSCAN20_None": {"ref_cnt": ["43", "82", "58"], "ccf_hat": [0.9, 0.54, 0.18], "alt_cnt": ["35", "11", "8"], "chrom": "1", "pos": "33945050"}, "LZIC_None": {"ref_cnt": ["61", "86", "65"], "ccf_hat": [0.56, 0.41, 0.04], "alt_cnt": ["17", "8", "1"], "chrom": "1", "pos": "9996650"}, "SORCS1_None": {"ref_cnt": ["84", "105", "114"], "ccf_hat": [0.93, 0.54, 0.11], "alt_cnt": ["37", "14", "7"], "chrom": "10", "pos": "108338950"}}, "line_width": 7.0, "cnvs": {}}, "4": {"ccf_hat": [0.01, 0.01, 1.0], "tumor_abundance": [0.01, 0.01, 1.0], "ccf_high": [0.01, 0.01, 1.0], "color": "rgb(16,49,41)", "drivers": ["TP53_None"], "ccf_low": [0.01, 0.01, 1.0], "muts": {"C3_None": {"ref_cnt": ["142", "139", "130"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "43"], "chrom": "19", "pos": "6714393"}, "MBTPS2_None": {"ref_cnt": ["151", "133", "110"], "ccf_hat": [0.02, 0.04, 0.78], "alt_cnt": ["0", "0", "43"], "chrom": "23", "pos": "21875555"}, "RP11-766F14.2_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "4", "pos": "100572683"}, "NEDD4L_None": {"ref_cnt": ["160", "146", "86"], "ccf_hat": [0.02, 0.04, 0.9], "alt_cnt": ["0", "0", "46"], "chrom": "18", "pos": "55997995"}, "TP53_None": {"ref_cnt": ["120", "118", "81"], "ccf_hat": [0.02, 0.04, 0.77], "alt_cnt": ["0", "0", "38"], "chrom": "17", "pos": "7578190"}, "USP43_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "17", "pos": "9603498"}, "BICC1_None": {"ref_cnt": ["118", "122", "79"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "41"], "chrom": "10", "pos": "60549075"}, "TLN2_None": {"ref_cnt": ["120", "120", "74"], "ccf_hat": [0.02, 0.04, 0.91], "alt_cnt": ["0", "0", "46"], "chrom": "15", "pos": "63112738"}, "SLC22A12_None": {"ref_cnt": ["79", "92", "30"], "ccf_hat": [0.03, 0.05, 0.75], "alt_cnt": ["0", "0", "35"], "chrom": "11", "pos": "64366049"}, "DOCK9_None": {"ref_cnt": ["119", "120", "83"], "ccf_hat": [0.02, 0.04, 0.99], "alt_cnt": ["0", "0", "76"], "chrom": "13", "pos": "99515321"}, "OR2L13_None": {"ref_cnt": ["78", "93", "23"], "ccf_hat": [0.03, 0.05, 0.87], "alt_cnt": ["0", "0", "43"], "chrom": "1", "pos": "248185331"}}, "line_width": 5.0, "cnvs": {}}, "5": {"ccf_hat": [0.14, 0.32, 0.2], "tumor_abundance": [0.14, 0.3, 0.0], "ccf_high": [0.17, 0.37, 0.34], "color": "rgb(93,119,254)", "drivers": ["MED23_None"], "ccf_low": [0.12, 0.27, 0.09], "muts": {"PATL2_None": {"ref_cnt": ["112", "116", "111"], "ccf_hat": [0.21, 0.27, 0.16], "alt_cnt": ["7", "5", "9"], "chrom": "15", "pos": "44965480"}, "TOP3A_None": {"ref_cnt": ["117", "113", "104"], "ccf_hat": [0.11, 0.35, 0.32], "alt_cnt": ["3", "7", "15"], "chrom": "17", "pos": "18218028"}, "SMIM20_None": {"ref_cnt": ["114", "110", "110"], "ccf_hat": [0.21, 0.38, 0.14], "alt_cnt": ["7", "8", "8"], "chrom": "4", "pos": "25916019"}, "TNC_None": {"ref_cnt": ["156", "141", "169"], "ccf_hat": [0.18, 0.31, 0.14], "alt_cnt": ["6", "7", "8"], "chrom": "9", "pos": "117825247"}, "SALL4_None": {"ref_cnt": ["112", "112", "109"], "ccf_hat": [0.23, 0.35, 0.22], "alt_cnt": ["8", "7", "11"], "chrom": "20", "pos": "50400965"}, "BAAT_None": {"ref_cnt": ["156", "137", "162"], "ccf_hat": [0.18, 0.42, 0.24], "alt_cnt": ["6", "11", "12"], "chrom": "9", "pos": "104133603"}, "TMEM184B_None": {"ref_cnt": ["73", "85", "53"], "ccf_hat": [0.19, 0.41, 0.31], "alt_cnt": ["5", "8", "13"], "chrom": "22", "pos": "38642056"}, "OR4E2_None": {"ref_cnt": ["119", "111", "112"], "ccf_hat": [0.06, 0.41, 0.13], "alt_cnt": ["1", "9", "8"], "chrom": "14", "pos": "22133786"}, "MARK3_None": {"ref_cnt": ["161", "142", "166"], "ccf_hat": [0.1, 0.16, 0.16], "alt_cnt": ["3", "3", "9"], "chrom": "14", "pos": "103934398"}, "MAP4_None": {"ref_cnt": ["75", "88", "53"], "ccf_hat": [0.13, 0.29, 0.31], "alt_cnt": ["3", "5", "13"], "chrom": "3", "pos": "47933834"}, "RP11-983P16.4_None": {"ref_cnt": ["113", "111", "110"], "ccf_hat": [0.21, 0.35, 0.19], "alt_cnt": ["7", "7", "10"], "chrom": "12", "pos": "53448131"}, "RAB11FIP5_None": {"ref_cnt": ["116", "118", "86"], "ccf_hat": [0.11, 0.14, 0.2], "alt_cnt": ["3", "2", "14"], "chrom": "2", "pos": "73308135"}, "MED23_None": {"ref_cnt": ["96", "106", "108"], "ccf_hat": [0.09, 0.42, 0.15], "alt_cnt": ["3", "9", "8"], "chrom": "6", "pos": "131908818"}}, "line_width": 6.0, "cnvs": {}}, "6": {"ccf_hat": [0.01, 0.01, 0.44], "tumor_abundance": [0.01, 0.01, 0.43], "ccf_high": [0.01, 0.01, 0.47], "color": "rgb(152,22,26)", "drivers": [], "ccf_low": [0.01, 0.01, 0.4], "muts": {"FGD2_None": {"ref_cnt": ["100", "114", "98"], "ccf_hat": [0.01, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "6", "pos": "36993628"}, "ARHGAP21_None": {"ref_cnt": ["120", "120", "91"], "ccf_hat": [0.02, 0.04, 0.6], "alt_cnt": ["0", "0", "29"], "chrom": "10", "pos": "24923955"}, "LIN9_None": {"ref_cnt": ["79", "92", "42"], "ccf_hat": [0.03, 0.05, 0.56], "alt_cnt": ["0", "0", "24"], "chrom": "1", "pos": "226488883"}, "IFNA2_None": {"ref_cnt": ["120", "120", "105"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "15"], "chrom": "9", "pos": "21385148"}, "SYTL1_None": {"ref_cnt": ["78", "94", "45"], "ccf_hat": [0.03, 0.05, 0.51], "alt_cnt": ["0", "0", "22"], "chrom": "1", "pos": "27677959"}, "NRAP_None": {"ref_cnt": ["120", "121", "104"], "ccf_hat": [0.02, 0.04, 0.34], "alt_cnt": ["0", "0", "16"], "chrom": "10", "pos": "115356883"}, "PYROXD2_None": {"ref_cnt": ["119", "121", "100"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "10", "pos": "100174813"}, "MTR_None": {"ref_cnt": ["77", "93", "46"], "ccf_hat": [0.03, 0.05, 0.49], "alt_cnt": ["0", "0", "21"], "chrom": "1", "pos": "236998929"}, "CCDC159_None": {"ref_cnt": ["140", "140", "148"], "ccf_hat": [0.02, 0.04, 0.47], "alt_cnt": ["0", "0", "24"], "chrom": "19", "pos": "11461587"}, "TNFAIP2_None": {"ref_cnt": ["161", "145", "154"], "ccf_hat": [0.02, 0.04, 0.38], "alt_cnt": ["0", "0", "19"], "chrom": "14", "pos": "103599771"}, "CHST10_None": {"ref_cnt": ["120", "120", "77"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "23"], "chrom": "2", "pos": "101009835"}, "EIF2AK2_None": {"ref_cnt": ["119", "120", "80"], "ccf_hat": [0.02, 0.04, 0.22], "alt_cnt": ["0", "0", "20"], "chrom": "2", "pos": "37374908"}, "NCKAP1L_None": {"ref_cnt": ["120", "121", "92"], "ccf_hat": [0.02, 0.04, 0.58], "alt_cnt": ["0", "0", "28"], "chrom": "12", "pos": "54913049"}, "ZNF543_None": {"ref_cnt": ["141", "141", "151"], "ccf_hat": [0.02, 0.04, 0.4], "alt_cnt": ["0", "0", "20"], "chrom": "19", "pos": "57839590"}, "SPTB_None": {"ref_cnt": ["163", "146", "156"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "16"], "chrom": "14", "pos": "65249071"}}, "line_width": 7.0, "cnvs": {}}}, "xlabels": ["T0", "T1", "T2"]})
+    })
+  </script>
+  <script>
+    $(function() {
+      $.widget("PhylogicNDT_report.fish_plot", {
+        options: {
+          xlabels: [],
+          time_points: [],
+          tumor_sizes: [],
+          cluster_dict: {1: {ccf_hat: [0], ccf_high: [0], ccf_low: [0], line_width: 0, color: "green", drivers: []}},
+          child_dict: {},
+          timed: true,
+          width: 500,
+          height: 400,
+          margins: {top: 20, right: 30, bottom: 35, left: 40}
+        },
+
+        _elements: {
+          fish_plot: undefined
+        },
+
+        _create: function() {
+          let xlabels = this.options.xlabels,
+            time_points = this.options.time_points,
+            tumor_sizes = Object.assign(...this.options.tumor_sizes.map(t => ({[t[0]]: t[1]}))),
+            cluster_dict = this.options.cluster_dict,
+            child_dict = this.options.child_dict,
+            timed = this.options.timed,
+            width = this.options.width,
+            height = this.options.height,
+            margins = this.options.margins;
+
+          let x = d3.scaleLinear()
+            .domain([Math.min(...time_points), Math.max(...time_points)])
+            .range([margins.left, width - margins.right]);
+
+          let y = d3.scaleLinear()
+            .domain([0, Math.max(...Object.values(tumor_sizes))]).nice()
+            .range([height - margins.bottom, margins.top]);
+
+          let xAxis = timed ?
+            g => g
+              .attr("transform", "translate(0 " + (height - margins.bottom).toString() + ")")
+              .call(d3.axisBottom(x)) :
+            g => g
+              .attr("transform", "translate(0 " + (height - margins.bottom).toString() + ")")
+              .call(d3.axisBottom(x)).tickValues(time_points).tickFormat(d => xlabels[d]);
+
+          let yAxis = g => g
+            .attr("transform", "translate(" + margins.left.toString() + " 0)")
+            .call(d3.axisLeft(y));
+
+          let interp1d = function(u, population) {
+            let p0, p1, t0, t1;
+            if (u < time_points[0]) {
+              p0 = population[0];
+              p1 = population[1];
+              t0 = time_points[0];
+              t1 = time_points[1];
+            } else {
+              let n;
+              for (n in time_points) {
+                n = parseInt(n);
+                if (time_points[n] > u) {
+                  break;
+                }
+              }
+              p0 = population[n - 1];
+              p1 = population[n];
+              t0 = time_points[n - 1];
+              t1 = time_points[n];
+            }
+            let m = (p1 - p0) / (t1 - t0),
+              dx = u - t0;
+            return p0 + (m * dx)
+          };
+
+          let h = [],
+            tumor_size_t = Object.keys(tumor_sizes).sort((a, b) => a - b);
+          for (let i in tumor_size_t) {
+            h.push(tumor_size_t[i] - tumor_size_t[i - 1]);
+          }
+
+          let pchip = function(u, population) {
+            if (u < tumor_size_t[0] || u > tumor_size_t[tumor_size_t.length - 1]) {
+              console.log(u, tumor_size_t[tumor_size_t.length - 1]);
+              throw "Input outside interpolation range";
+            }
+            let n;
+            for (n in tumor_size_t) {
+              n = parseInt(n);
+              if (tumor_size_t[n] > u) {
+                break;
+              }
+            }
+            let p0 = population[n - 1],
+              p1 = population[n],
+              d0 = (p0 - population[n - 2]) / h[n - 1],
+              d1 = (p1 - p0) / h[n],
+              d2 = (population[n + 1] - p1) / h[n + 1],
+              fp0 = n === 1 ? d1 : (h[n - 1] * d0 + h[n] * d1) / (h[n - 1] + h[n]),
+              fp1 = n === (tumor_size_t.length - 1) ? d1 : (h[n] * d1 + h[n + 1] * d2) / (h[n] + h[n + 1]);
+            let v = (u - tumor_size_t[n - 1]) / (tumor_size_t[n] - tumor_size_t[n - 1]);
+            return Math.max(0, (p0 * ((2 * v * v * v) - (3 * v * v) + 1)) +
+              (p1 * ((-2 * v * v * v) + (3 * v * v))) +
+              (fp0 * ((v * v * v) - (2 * v * v) + v)) +
+              (fp1 * ((v * v * v) - (v * v))))
+          };
+
+          let getOrder = function(cluster, level) {
+            cluster = cluster || child_dict[null][0];
+            level = level || 1;
+            let order = [cluster],
+              breaks = {},
+              children = child_dict[cluster];
+            for (let i in children) {
+              let {order: child_order, breaks: child_breaks, level: child_level} = getOrder(children[i], level + 1);
+              order = [...order, ...child_order];
+              breaks[children[i]] = children.length > 1 ? child_level : false;
+              breaks = Object.assign({}, breaks, child_breaks);
+            }
+            return {order: order, breaks: breaks, level: level}
+          };
+
+          let {order, breaks} = getOrder(),
+            max_break = Math.max(...Object.values(breaks));
+
+          let fish_plot = d3.select(document.createElement("svg"))
+            .attr("baseProfile", "full")
+            .attr("viewBox", "0 0 " + width + " " + height)
+            .style("max-width", "500px")
+            .style("min-width", "300px")
+            .attr("version", "1.1")
+            .attr("xmlns", "http://www.w3.org/2000/svg")
+            .attr("xmlns:ev", "http://www.w3.org/2001/xml-events")
+            .attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
+          fish_plot.append("g")
+            .call(xAxis);
+          fish_plot.append("g")
+            .call(yAxis);
+          fish_plot.append("text")
+            .attr("x", (width + margins.left - margins.right) / 2)
+            .attr("y", height - 5)
+            .style("text-anchor", "middle")
+            .attr("font-size", "10px")
+            .text("Time");
+          fish_plot.append("text")
+            .attr("transform", "rotate(-90 10 " + ((height + margins.top - margins.bottom) / 2).toString() + ")")
+            .attr("x", 10)
+            .attr("y", (height + margins.top - margins.bottom) / 2)
+            .style("text-anchor", "middle")
+            .attr("font-size", "10px")
+            .text("Relative size");
+          fish_plot.append("text")
+            .attr("x", width / 2)
+            .attr("y", margins.top / 2)
+            .attr("text-anchor", "middle")
+            .style("font-size", "14px")
+            .style("text-decoration", "underline")
+            .text("Tumor abundance plot");
+
+          fish_plot.selectAll("circle")
+            .data(Object.keys(tumor_sizes).filter(d => d >= Math.min(...time_points) & d <= Math.max(...time_points)))
+            .join("circle")
+            .attr("cx", d => x(d))
+            .attr("cy", d => y(tumor_sizes[d]))
+            .attr("r", 3)
+            .attr("fill", "black")
+            .attr("opacity", 0.5);
+
+          let t0 = time_points[0],
+            linspace = [t0],
+            step = (time_points[time_points.length - 1] - t0) / 100;
+          for (let i = 1; i < 101; i++) {
+            linspace.push(i * step + t0);
+          }
+
+          let abundance_stack = Array(101).fill(0);
+
+          for (let o in order) {
+            let cluster = order[order.length - o - 1],
+              unique_population = child_dict[cluster].reduce(
+                (a, c) => a.map((d, i) => d - cluster_dict[c].tumor_abundance[i]), cluster_dict[cluster].tumor_abundance
+              ),
+              base = [],
+              head = [],
+              interp_pop = tumor_size_t.map(u => interp1d(u, unique_population) * tumor_sizes[u]);
+            for (let i in linspace) {
+              base.push(x(linspace[i]) + "," + y(abundance_stack[i]));
+              abundance_stack[i] += pchip(linspace[i], interp_pop);
+              head.push(x(linspace[i]) + "," + y(abundance_stack[i]));
+            }
+            fish_plot.append("path")
+              .datum(linspace)
+              .attr("stroke", cluster_dict[cluster].color)
+              .attr("stroke-width", breaks[cluster] ? (max_break - breaks[cluster]) * 2 + 1 : 0)
+              .attr("stroke-dasharray", 4)
+              .attr("fill", "none")
+              .attr("opacity", 1.0)
+              .attr("d", d3.line()
+                .x(d => x(d))
+                .y((d, i) => y(abundance_stack[i])));
+
+            fish_plot.append("polygon")
+              .attr("points", head.join(" ") + " " + base.reverse().join(" "))
+              .attr("fill", cluster_dict[cluster].color)
+              .attr("opacity", 0.5)
+              .attr("stroke", "none");
+          }
+          fish_plot.append("g")
+            .selectAll("line")
+            .data(time_points)
+            .join("line")
+            .attr("x1", d => x(d))
+            .attr("y1", y.range()[0])
+            .attr("x2", d => x(d))
+            .attr("y2", y.range()["length"] + margins.top)
+            .attr("stroke", "black")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "1 4");
+
+          this._elements.fish_plot = fish_plot.node();
+
+          this._refresh();
+
+          d3.select(this.element.context.parentElement).append("button")
+            .attr("onclick", "$(\"#fish-plot\").fish_plot(\"download\")")
+            .attr("style", "font-size: 12px;")
+            .html("Download as SVG")
+
+        },
+
+        _refresh: function() {
+          this.element.context.innerHTML = this._elements.fish_plot.outerHTML;
+        },
+
+        download: function() {
+          let dl_link = "data:text/plain;charset=utf-8," + encodeURIComponent(this._elements.fish_plot.outerHTML),
+            dl = document.createElement("a");
+          document.body.appendChild(dl);
+          dl.setAttribute("href", dl_link);
+          dl.setAttribute("download", "patient1" + ".tumor_abundance_plot.svg");
+          dl.click();
+        },
+
+        _destroy: function() {
+          this.element.context.innerHTML = "";
+          let parent = this.element.context.parentElement;
+          parent.removeChild(parent.getElementsByTagName("button")[0])
+        }
+      });
+
+      let fish_options = {"tumor_sizes": [[50.0, 1.0], [100.0, 1.0], [120.0, 1.0]], "xlabels": ["T0", "T1", "T2"], "child_dict": {"1": [2, 4], "2": [3, 5], "3": [], "4": [6], "5": [], "6": [], "null": [1]}, "time_points": [50.0, 100.0, 120.0], "cluster_dict": {"1": {"ccf_hat": [1.0, 1.0, 1.0], "tumor_abundance": [1.0, 1.0, 1.0], "ccf_high": [1.0, 1.0, 1.0], "color": "rgb(39,140,24)", "drivers": ["MTOR_None"], "ccf_low": [1.0, 1.0, 1.0], "muts": {"C19orf57_None": {"ref_cnt": ["102", "111", "120"], "ccf_hat": [0.92, 0.93, 0.92], "alt_cnt": ["39", "30", "52"], "chrom": "19", "pos": "14000618"}, "TREX2_None": {"ref_cnt": ["84", "89", "53"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["67", "44", "80"], "chrom": "23", "pos": "152710812"}, "MORF4L1_None": {"ref_cnt": ["76", "91", "63"], "ccf_hat": [0.98, 0.96, 0.98], "alt_cnt": ["42", "28", "56"], "chrom": "15", "pos": "79184620"}, "FMNL3_None": {"ref_cnt": ["76", "97", "68"], "ccf_hat": [0.98, 0.91, 0.96], "alt_cnt": ["45", "24", "53"], "chrom": "12", "pos": "50042824"}, "RP11-144G6.4_None": {"ref_cnt": ["74", "87", "63"], "ccf_hat": [0.98, 0.97, 0.98], "alt_cnt": ["46", "32", "57"], "chrom": "10", "pos": "47192168"}, "NHSL2_None": {"ref_cnt": ["109", "104", "85"], "ccf_hat": [0.93, 0.94, 0.99], "alt_cnt": ["42", "29", "68"], "chrom": "23", "pos": "71358975"}, "FREM2_None": {"ref_cnt": ["82", "101", "69"], "ccf_hat": [0.94, 0.71, 0.99], "alt_cnt": ["37", "18", "91"], "chrom": "13", "pos": "39424226"}, "CACNA1H_None": {"ref_cnt": ["37", "64", "18"], "ccf_hat": [0.98, 0.97, 0.94], "alt_cnt": ["42", "29", "48"], "chrom": "16", "pos": "1267980"}, "TCEAL7_None": {"ref_cnt": ["107", "104", "72"], "ccf_hat": [0.95, 0.94, 0.98], "alt_cnt": ["43", "29", "60"], "chrom": "23", "pos": "102586451"}, "CBFA2T2_None": {"ref_cnt": ["85", "99", "62"], "ccf_hat": [0.91, 0.8, 0.98], "alt_cnt": ["35", "20", "58"], "chrom": "20", "pos": "32232338"}, "MTOR_None": {"ref_cnt": ["32", "59", "16"], "ccf_hat": [0.98, 0.98, 0.96], "alt_cnt": ["47", "34", "50"], "chrom": "1", "pos": "11190680"}, "SNX29P2_None": {"ref_cnt": ["36", "70", "12"], "ccf_hat": [0.98, 0.95, 0.98], "alt_cnt": ["42", "23", "54"], "chrom": "16", "pos": "29393068"}, "METTL2A_None": {"ref_cnt": ["87", "93", "73"], "ccf_hat": [0.85, 0.94, 0.92], "alt_cnt": ["32", "26", "47"], "chrom": "17", "pos": "60501595"}, "GPR133_None": {"ref_cnt": ["77", "97", "63"], "ccf_hat": [0.95, 0.6, 0.92], "alt_cnt": ["38", "15", "48"], "chrom": "12", "pos": "131620700"}, "TRO_None": {"ref_cnt": ["85", "84", "88"], "ccf_hat": [0.99, 0.98, 0.99], "alt_cnt": ["66", "49", "65"], "chrom": "23", "pos": "54949804"}}, "line_width": 7.0, "cnvs": {}}, "2": {"ccf_hat": [1.0, 1.0, 0.23], "tumor_abundance": [0.99, 0.99, 0.0], "ccf_high": [1.0, 1.0, 0.28], "color": "rgb(103,200,243)", "drivers": [], "ccf_low": [1.0, 1.0, 0.21], "muts": {"L3MBTL1_None": {"ref_cnt": ["114", "117", "114"], "ccf_hat": [0.98, 0.92, 0.34], "alt_cnt": ["50", "28", "19"], "chrom": "20", "pos": "42143973"}, "CACNA1C_None": {"ref_cnt": ["82", "92", "108"], "ccf_hat": [0.95, 0.96, 0.25], "alt_cnt": ["38", "28", "12"], "chrom": "12", "pos": "2224416"}, "CLCN3_None": {"ref_cnt": ["80", "90", "106"], "ccf_hat": [0.97, 0.97, 0.31], "alt_cnt": ["40", "30", "15"], "chrom": "4", "pos": "170618648"}, "DNAH9_None": {"ref_cnt": ["79", "93", "104"], "ccf_hat": [0.97, 0.96, 0.35], "alt_cnt": ["41", "28", "17"], "chrom": "17", "pos": "11786979"}, "TEAD2_None": {"ref_cnt": ["112", "120", "158"], "ccf_hat": [0.74, 0.73, 0.28], "alt_cnt": ["29", "19", "14"], "chrom": "19", "pos": "49846623"}, "SNAP25-AS1_None": {"ref_cnt": ["84", "99", "111"], "ccf_hat": [0.92, 0.86, 0.19], "alt_cnt": ["36", "22", "10"], "chrom": "20", "pos": "10258368"}, "ADAM12_None": {"ref_cnt": ["74", "96", "108"], "ccf_hat": [0.98, 0.92, 0.25], "alt_cnt": ["46", "25", "12"], "chrom": "10", "pos": "127806625"}, "GABRA4_None": {"ref_cnt": ["80", "96", "105"], "ccf_hat": [0.95, 0.91, 0.3], "alt_cnt": ["38", "24", "14"], "chrom": "4", "pos": "46994934"}, "LZTS2_None": {"ref_cnt": ["77", "92", "105"], "ccf_hat": [0.98, 0.96, 0.32], "alt_cnt": ["43", "28", "15"], "chrom": "10", "pos": "102766269"}, "RANBP6_None": {"ref_cnt": ["87", "97", "101"], "ccf_hat": [0.86, 0.89, 0.4], "alt_cnt": ["33", "23", "19"], "chrom": "9", "pos": "6014284"}, "RGS20_None": {"ref_cnt": ["78", "95", "69"], "ccf_hat": [0.98, 0.94, 0.25], "alt_cnt": ["42", "26", "11"], "chrom": "8", "pos": "54764473"}, "CPNE8_None": {"ref_cnt": ["68", "89", "115"], "ccf_hat": [0.99, 0.97, 0.1], "alt_cnt": ["52", "30", "6"], "chrom": "12", "pos": "39047810"}, "DPH2_None": {"ref_cnt": ["46", "76", "55"], "ccf_hat": [0.81, 0.87, 0.27], "alt_cnt": ["32", "17", "11"], "chrom": "1", "pos": "44436272"}, "ZNF675_None": {"ref_cnt": ["104", "115", "161"], "ccf_hat": [0.91, 0.85, 0.22], "alt_cnt": ["38", "25", "11"], "chrom": "19", "pos": "23837467"}, "TROAP_None": {"ref_cnt": ["83", "98", "109"], "ccf_hat": [0.95, 0.9, 0.22], "alt_cnt": ["38", "24", "11"], "chrom": "12", "pos": "49723678"}, "FN1_None": {"ref_cnt": ["81", "95", "79"], "ccf_hat": [0.95, 0.9, 0.24], "alt_cnt": ["38", "23", "21"], "chrom": "2", "pos": "216279555"}, "CNTD1_None": {"ref_cnt": ["83", "92", "106"], "ccf_hat": [0.94, 0.96, 0.3], "alt_cnt": ["37", "28", "14"], "chrom": "17", "pos": "40958783"}}, "line_width": 8.0, "cnvs": {}}, "3": {"ccf_hat": [0.68, 0.4, 0.09], "tumor_abundance": [0.69, 0.43, 0.0], "ccf_high": [0.69, 0.43, 0.09], "color": "rgb(248,139,16)", "drivers": [], "ccf_low": [0.67, 0.37, 0.09], "muts": {"PCNXL2_None": {"ref_cnt": ["46", "85", "56"], "ccf_hat": [0.81, 0.41, 0.24], "alt_cnt": ["32", "8", "10"], "chrom": "1", "pos": "233394701"}, "PIPOX_None": {"ref_cnt": ["97", "112", "115"], "ccf_hat": [0.61, 0.38, 0.08], "alt_cnt": ["21", "8", "4"], "chrom": "17", "pos": "27372016"}, "FRRS1L_None": {"ref_cnt": ["128", "138", "166"], "ccf_hat": [0.86, 0.32, 0.19], "alt_cnt": ["35", "7", "10"], "chrom": "9", "pos": "111903657"}, "MPRIP_None": {"ref_cnt": ["101", "116", "119"], "ccf_hat": [0.57, 0.27, 0.04], "alt_cnt": ["20", "5", "1"], "chrom": "17", "pos": "17050651"}, "EMX2_None": {"ref_cnt": ["88", "111", "107"], "ccf_hat": [0.84, 0.41, 0.27], "alt_cnt": ["32", "9", "13"], "chrom": "10", "pos": "119307662"}, "GK2_None": {"ref_cnt": ["88", "109", "106"], "ccf_hat": [0.84, 0.47, 0.3], "alt_cnt": ["32", "11", "14"], "chrom": "4", "pos": "80328130"}, "DNAJC13_None": {"ref_cnt": ["57", "82", "61"], "ccf_hat": [0.67, 0.49, 0.09], "alt_cnt": ["22", "10", "5"], "chrom": "3", "pos": "132176120"}, "USP15_None": {"ref_cnt": ["93", "113", "107"], "ccf_hat": [0.75, 0.41, 0.27], "alt_cnt": ["28", "9", "13"], "chrom": "12", "pos": "62743075"}, "FBP2_None": {"ref_cnt": ["146", "143", "174"], "ccf_hat": [0.35, 0.27, 0.04], "alt_cnt": ["15", "6", "1"], "chrom": "9", "pos": "97333853"}, "BOP1_None": {"ref_cnt": ["103", "106", "75"], "ccf_hat": [0.43, 0.52, 0.07], "alt_cnt": ["16", "13", "4"], "chrom": "8", "pos": "145515007"}, "CDC7_None": {"ref_cnt": ["63", "88", "60"], "ccf_hat": [0.51, 0.29, 0.11], "alt_cnt": ["16", "5", "6"], "chrom": "1", "pos": "91978846"}, "SLC22A13_None": {"ref_cnt": ["58", "88", "64"], "ccf_hat": [0.66, 0.29, 0.05], "alt_cnt": ["21", "5", "2"], "chrom": "3", "pos": "38318557"}, "ZSCAN20_None": {"ref_cnt": ["43", "82", "58"], "ccf_hat": [0.9, 0.54, 0.18], "alt_cnt": ["35", "11", "8"], "chrom": "1", "pos": "33945050"}, "LZIC_None": {"ref_cnt": ["61", "86", "65"], "ccf_hat": [0.56, 0.41, 0.04], "alt_cnt": ["17", "8", "1"], "chrom": "1", "pos": "9996650"}, "SORCS1_None": {"ref_cnt": ["84", "105", "114"], "ccf_hat": [0.93, 0.54, 0.11], "alt_cnt": ["37", "14", "7"], "chrom": "10", "pos": "108338950"}}, "line_width": 7.0, "cnvs": {}}, "4": {"ccf_hat": [0.01, 0.01, 1.0], "tumor_abundance": [0.01, 0.01, 1.0], "ccf_high": [0.01, 0.01, 1.0], "color": "rgb(16,49,41)", "drivers": ["TP53_None"], "ccf_low": [0.01, 0.01, 1.0], "muts": {"C3_None": {"ref_cnt": ["142", "139", "130"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "43"], "chrom": "19", "pos": "6714393"}, "MBTPS2_None": {"ref_cnt": ["151", "133", "110"], "ccf_hat": [0.02, 0.04, 0.78], "alt_cnt": ["0", "0", "43"], "chrom": "23", "pos": "21875555"}, "RP11-766F14.2_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "4", "pos": "100572683"}, "NEDD4L_None": {"ref_cnt": ["160", "146", "86"], "ccf_hat": [0.02, 0.04, 0.9], "alt_cnt": ["0", "0", "46"], "chrom": "18", "pos": "55997995"}, "TP53_None": {"ref_cnt": ["120", "118", "81"], "ccf_hat": [0.02, 0.04, 0.77], "alt_cnt": ["0", "0", "38"], "chrom": "17", "pos": "7578190"}, "USP43_None": {"ref_cnt": ["120", "120", "76"], "ccf_hat": [0.02, 0.04, 0.88], "alt_cnt": ["0", "0", "44"], "chrom": "17", "pos": "9603498"}, "BICC1_None": {"ref_cnt": ["118", "122", "79"], "ccf_hat": [0.02, 0.04, 0.82], "alt_cnt": ["0", "0", "41"], "chrom": "10", "pos": "60549075"}, "TLN2_None": {"ref_cnt": ["120", "120", "74"], "ccf_hat": [0.02, 0.04, 0.91], "alt_cnt": ["0", "0", "46"], "chrom": "15", "pos": "63112738"}, "SLC22A12_None": {"ref_cnt": ["79", "92", "30"], "ccf_hat": [0.03, 0.05, 0.75], "alt_cnt": ["0", "0", "35"], "chrom": "11", "pos": "64366049"}, "DOCK9_None": {"ref_cnt": ["119", "120", "83"], "ccf_hat": [0.02, 0.04, 0.99], "alt_cnt": ["0", "0", "76"], "chrom": "13", "pos": "99515321"}, "OR2L13_None": {"ref_cnt": ["78", "93", "23"], "ccf_hat": [0.03, 0.05, 0.87], "alt_cnt": ["0", "0", "43"], "chrom": "1", "pos": "248185331"}}, "line_width": 5.0, "cnvs": {}}, "5": {"ccf_hat": [0.14, 0.32, 0.2], "tumor_abundance": [0.14, 0.3, 0.0], "ccf_high": [0.17, 0.37, 0.34], "color": "rgb(93,119,254)", "drivers": ["MED23_None"], "ccf_low": [0.12, 0.27, 0.09], "muts": {"PATL2_None": {"ref_cnt": ["112", "116", "111"], "ccf_hat": [0.21, 0.27, 0.16], "alt_cnt": ["7", "5", "9"], "chrom": "15", "pos": "44965480"}, "TOP3A_None": {"ref_cnt": ["117", "113", "104"], "ccf_hat": [0.11, 0.35, 0.32], "alt_cnt": ["3", "7", "15"], "chrom": "17", "pos": "18218028"}, "SMIM20_None": {"ref_cnt": ["114", "110", "110"], "ccf_hat": [0.21, 0.38, 0.14], "alt_cnt": ["7", "8", "8"], "chrom": "4", "pos": "25916019"}, "TNC_None": {"ref_cnt": ["156", "141", "169"], "ccf_hat": [0.18, 0.31, 0.14], "alt_cnt": ["6", "7", "8"], "chrom": "9", "pos": "117825247"}, "SALL4_None": {"ref_cnt": ["112", "112", "109"], "ccf_hat": [0.23, 0.35, 0.22], "alt_cnt": ["8", "7", "11"], "chrom": "20", "pos": "50400965"}, "BAAT_None": {"ref_cnt": ["156", "137", "162"], "ccf_hat": [0.18, 0.42, 0.24], "alt_cnt": ["6", "11", "12"], "chrom": "9", "pos": "104133603"}, "TMEM184B_None": {"ref_cnt": ["73", "85", "53"], "ccf_hat": [0.19, 0.41, 0.31], "alt_cnt": ["5", "8", "13"], "chrom": "22", "pos": "38642056"}, "OR4E2_None": {"ref_cnt": ["119", "111", "112"], "ccf_hat": [0.06, 0.41, 0.13], "alt_cnt": ["1", "9", "8"], "chrom": "14", "pos": "22133786"}, "MARK3_None": {"ref_cnt": ["161", "142", "166"], "ccf_hat": [0.1, 0.16, 0.16], "alt_cnt": ["3", "3", "9"], "chrom": "14", "pos": "103934398"}, "MAP4_None": {"ref_cnt": ["75", "88", "53"], "ccf_hat": [0.13, 0.29, 0.31], "alt_cnt": ["3", "5", "13"], "chrom": "3", "pos": "47933834"}, "RP11-983P16.4_None": {"ref_cnt": ["113", "111", "110"], "ccf_hat": [0.21, 0.35, 0.19], "alt_cnt": ["7", "7", "10"], "chrom": "12", "pos": "53448131"}, "RAB11FIP5_None": {"ref_cnt": ["116", "118", "86"], "ccf_hat": [0.11, 0.14, 0.2], "alt_cnt": ["3", "2", "14"], "chrom": "2", "pos": "73308135"}, "MED23_None": {"ref_cnt": ["96", "106", "108"], "ccf_hat": [0.09, 0.42, 0.15], "alt_cnt": ["3", "9", "8"], "chrom": "6", "pos": "131908818"}}, "line_width": 6.0, "cnvs": {}}, "6": {"ccf_hat": [0.01, 0.01, 0.44], "tumor_abundance": [0.01, 0.01, 0.43], "ccf_high": [0.01, 0.01, 0.47], "color": "rgb(152,22,26)", "drivers": [], "ccf_low": [0.01, 0.01, 0.4], "muts": {"FGD2_None": {"ref_cnt": ["100", "114", "98"], "ccf_hat": [0.01, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "6", "pos": "36993628"}, "ARHGAP21_None": {"ref_cnt": ["120", "120", "91"], "ccf_hat": [0.02, 0.04, 0.6], "alt_cnt": ["0", "0", "29"], "chrom": "10", "pos": "24923955"}, "LIN9_None": {"ref_cnt": ["79", "92", "42"], "ccf_hat": [0.03, 0.05, 0.56], "alt_cnt": ["0", "0", "24"], "chrom": "1", "pos": "226488883"}, "IFNA2_None": {"ref_cnt": ["120", "120", "105"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "15"], "chrom": "9", "pos": "21385148"}, "SYTL1_None": {"ref_cnt": ["78", "94", "45"], "ccf_hat": [0.03, 0.05, 0.51], "alt_cnt": ["0", "0", "22"], "chrom": "1", "pos": "27677959"}, "NRAP_None": {"ref_cnt": ["120", "121", "104"], "ccf_hat": [0.02, 0.04, 0.34], "alt_cnt": ["0", "0", "16"], "chrom": "10", "pos": "115356883"}, "PYROXD2_None": {"ref_cnt": ["119", "121", "100"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "20"], "chrom": "10", "pos": "100174813"}, "MTR_None": {"ref_cnt": ["77", "93", "46"], "ccf_hat": [0.03, 0.05, 0.49], "alt_cnt": ["0", "0", "21"], "chrom": "1", "pos": "236998929"}, "CCDC159_None": {"ref_cnt": ["140", "140", "148"], "ccf_hat": [0.02, 0.04, 0.47], "alt_cnt": ["0", "0", "24"], "chrom": "19", "pos": "11461587"}, "TNFAIP2_None": {"ref_cnt": ["161", "145", "154"], "ccf_hat": [0.02, 0.04, 0.38], "alt_cnt": ["0", "0", "19"], "chrom": "14", "pos": "103599771"}, "CHST10_None": {"ref_cnt": ["120", "120", "77"], "ccf_hat": [0.02, 0.04, 0.42], "alt_cnt": ["0", "0", "23"], "chrom": "2", "pos": "101009835"}, "EIF2AK2_None": {"ref_cnt": ["119", "120", "80"], "ccf_hat": [0.02, 0.04, 0.22], "alt_cnt": ["0", "0", "20"], "chrom": "2", "pos": "37374908"}, "NCKAP1L_None": {"ref_cnt": ["120", "121", "92"], "ccf_hat": [0.02, 0.04, 0.58], "alt_cnt": ["0", "0", "28"], "chrom": "12", "pos": "54913049"}, "ZNF543_None": {"ref_cnt": ["141", "141", "151"], "ccf_hat": [0.02, 0.04, 0.4], "alt_cnt": ["0", "0", "20"], "chrom": "19", "pos": "57839590"}, "SPTB_None": {"ref_cnt": ["163", "146", "156"], "ccf_hat": [0.02, 0.04, 0.32], "alt_cnt": ["0", "0", "16"], "chrom": "14", "pos": "65249071"}}, "line_width": 7.0, "cnvs": {}}}};
+
+      if (fish_options) {
+        $("#fish-plot").fish_plot(fish_options)
+      }
+    })
+  </script>
+  <style>
+    .active-sample:hover {
+      background-color: #f0f0f0;
+    }
+
+    .removed-sample {
+      background-color: gray;
+    }
+
+    .active-cluster {
+      opacity: 1.0;
+    }
+
+    .removed-cluster {
+      opacity: 0.2;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <div class="container-fluid">
+      <div class="row">
+        <h2 class="ml-3" >Phylogic Results - patient1</h2>
+      </div>
+      <div class="card">
+        <div id="headingOne" class="card-header">
+          <h5 class="mb-0">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+              Clustering plot/tree
+            </button>
+          </h5>
+        </div>
+        <div id="collapseOne" class="collapse show" aria-labelledby="headingOne">
+          <div class="card-body">
+            <div class="row">
+              <div id="sample-name-table" style="max-height: 600px; width: 25%; padding-right: 30px; overflow-y: auto; display: table-cell">
+              </div><div class="border-right" style="overflow-y: hidden; width: 45%; padding-right: 30px; display: table-cell">
+                <div style="min-width: 450px">
+                  <div style="display: inline-block; width: 84%; vertical-align: top">
+                    <div id="clustering-plot"></div>
+                    <div id="treatment-plot"></div>
+                    <button onclick="$('#clustering-plot').clustering_plot('download')" style="font-size: 12px">Download as SVG</button>
+                  </div><div style="display: inline-block; width: 16%; vertical-align: top">
+                    <div id="time-switch"></div>
+                    <div id="cluster-switches" style="overflow-x: hidden"></div>
+                  </div>
+                </div>
+              </div><div style="width: 30%">
+                <div id="tree"></div>
+                <div id="tree-switch"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div id="headingTwo" class="card-header">
+          <h5 class="mb-0">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">
+              Clonality chart
+            </button>
+          </h5>
+        </div>
+        <div id="collapseTwo" class="collapse show" aria-labelledby="headingTwo">
+          <div class="card-body">
+            <div class="row">
+              <div id="mutation-visual" class="col-md-12 overflow-auto"></div>
+              <button onclick="$('#mutation-visual').mutation_visual('download')" style="font-size: 12px">Download as SVG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div id="headingThree" class="card-header">
+          <h5 class="mb-0">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseThree" aria-expanded="true" aria-controls="collapseThree">
+              Mutation table
+            </button>
+          </h5>
+        </div>
+        <div id="collapseThree" class="collapse show" aria-labelledby="headingThree">
+          <div class="card-body">
+            <div class="row">
+              <div id="cluster-table" class="col-md-12 overflow-auto"></div>
+            </div>
+            <button onclick="$('#cluster-table').cluster_table('download_as_tsv')" style="font-size: 12px">Download as TSV</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div id="headingFour" class="card-header">
+          <h5 class="mb-0">
+            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseFour" aria-expanded="true" aria-controls="collapseFour">
+              Other plots
+            </button>
+          </h5>
+        </div>
+        <div id="collapseFour" class="collapse show" aria-labelledby="headingFour">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 text-center">
+                <div id="mutation-plot"></div>
+                <button onclick="$('#mutation-plot').mutation_plot('download')" style="font-size: 12px">Download as SVG</button>
+              </div>
+              <div class="col-md-6 text-center">
+                <div id="fish-plot"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="padding-bottom: 50px"></div>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,4 @@
+sample_id	maf_fn	wxs_purity	collection_date_dfd	cnv_seg_fn	participant_id	preservation_method	wxs_ploidy
+p1_t1	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient1/sample_muts_annotated/p1_t1.variants.annotated.tsv	0.7	50	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient1/sample_cnv_profiles/p1_t1.simulated_seg.acr.tsv	patient1		1.83
+p1_t2	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient1/sample_muts_annotated/p1_t2.variants.annotated.tsv	0.45	100	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient1/sample_cnv_profiles/p1_t2.simulated_seg.acr.tsv	patient1		1.9
+p1_t3	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient1/sample_muts_annotated/p1_t3.variants.annotated.tsv	0.9	120	/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data/patient1/sample_cnv_profiles/p1_t3.simulated_seg.acr.tsv	patient1		1.75

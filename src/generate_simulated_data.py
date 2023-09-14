@@ -207,7 +207,6 @@ class Sample:
         return self.clone_ccfs
 
     def set_cnv_profile(self, num_subclones, parents, event_trees, data_directory, drop_sex_chr=True):
-        
         phylogeny = simulate.CNV_Profile().phylogeny
         phy_dict = {
             'num_subclones': num_subclones,
@@ -228,6 +227,7 @@ class Sample:
         
         cnv_profile.cnv_profile_df['sigma.minor'] = np.random.exponential(0.01, size=len(cnv_profile.cnv_profile_df))
         cnv_profile.cnv_profile_df['sigma.major'] = cnv_profile.cnv_profile_df['sigma.minor']
+        cnv_profile.cnv_profile_df['sigma.tau'] = cnv_profile.cnv_profile_df['sigma.minor'] * 2
         self.cnv_profile = cnv_profile
         
         self.absolute_cnv_profile_fn = f'{data_directory}/{self.name}.simulated_seg.tsv'
@@ -264,6 +264,7 @@ class Sample:
         acr_cnv_profile_df['mu.major'] = acr_cnv_profile_df['mu.major'] * cn_delta + cn_zero
         acr_cnv_profile_df['sigma.minor'] = acr_cnv_profile_df['sigma.minor'] / cn_delta
         acr_cnv_profile_df['sigma.major'] = acr_cnv_profile_df['sigma.minor'] / cn_delta
+        acr_cnv_profile_df['sigma.tau'] = acr_cnv_profile_df['sigma.tau'] / cn_delta
 
 
         if drop_sex_chr:
@@ -649,6 +650,9 @@ class Sample:
             lambda x: get_local_allelic_cn(x, self.clone_ccfs, self.purity), axis=1, result_type='expand'
         )
 
+        sample_variants_df['n_ref_count'] = sample_variants_df['t_ref_count'] + sample_variants_df['t_alt_count']
+        sample_variants_df['n_alt_count'] = 0
+
         sample_variants_df = sample_variants_df.rename(
             columns={
                 'chrom': 'Chromosome', 
@@ -664,8 +668,11 @@ class Sample:
             'Start_position',
             'Reference_Allele',
             'Tumor_Seq_Allele2',
+            'Variant_Type',
             't_alt_count',
             't_ref_count',
+            'n_alt_count',
+            'n_ref_count',
             'local_cn_a1',
             'local_cn_a2',
             'cluster',
@@ -703,6 +710,105 @@ class Sample:
         multiplicity: dictionary giving interval multiplicity of mutation in each subclone (not typically known)
         vaf: simulated variant allele fraction
         '''
+
+    def maf2vcf(
+        self, 
+        data_directory, 
+        write_vcf_header_path, 
+        local_fasta_file_path, 
+        local_fasta_fai_file_path, 
+        control_name
+    ):
+        self.vcf_fn = f'{data_directory}/{self.name}.variants.vcf'
+        # write header
+
+        cd_cmd = f'cd {data_directory}'
+        write_vcf_header_cmd = f'python {write_vcf_header_path} -ref {local_fasta_file_path} -ref_fai {local_fasta_fai_file_path} -o_vcf {self.vcf_fn} -case_name {self.name} -control_name {control_name}'
+        
+        full_cmd = cd_cmd + ' && ' + write_vcf_header_cmd
+        self.full_write_vcf_header_cmd = full_cmd
+        os.system(full_cmd)
+
+        # write 
+
+        def get_vcf_df(maf_df, pos_col='Start_position', chrseq_list=list(range(24))):
+            """
+            maf_df : the SNPs to be merged, one position per line
+            """
+            to_vcf_col = {
+                "Chromosome": "#CHROM",
+                pos_col: "POS",
+                "Reference_Allele": "REF",
+                "Tumor_Seq_Allele2": "ALT",
+            }
+            vcf_header = "#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  normal   tumor".split()
+        
+            # unmerged SNPs
+            snp_df = maf_df.assign(
+                tumor=maf_df.apply(
+                    lambda x: "{},{}".format(x["t_ref_count"], x["t_alt_count"]), axis=1
+                ),
+                normal=maf_df.apply(
+                    lambda x: "{},{}".format(x["n_ref_count"], x["n_alt_count"]), axis=1
+                ),
+            )
+            snp_df["contig_id"] = snp_df["Chromosome"].map(lambda x: chrseq_list.index(x))
+            snp_df = snp_df.loc[
+                :,
+                [
+                    "Chromosome",
+                    pos_col,
+                    "Reference_Allele",
+                    "Tumor_Seq_Allele2",
+                    "tumor",
+                    "normal",
+                    "contig_id",
+                ],
+            ].rename(columns=to_vcf_col)
+        
+            # concat two tables
+            return (
+                snp_df.sort_values(["contig_id", "POS"])
+                .assign(ID=".", QUAL=".", FILTER="PASS", INFO="SOMATIC", FORMAT="AD")
+                .loc[:, vcf_header]
+            )
+
+        vcf_df = get_vcf_df(self.variants_df)
+
+        vcf_df.to_csv(
+            self.vcf_fn, mode="a", index=False, header=False, sep="\t"
+        )
+        
+        
+    def run_absolute(
+        self, 
+        R_path,
+        absolute_src_path,
+    ):
+        maf = self.variants_fn
+        seg_file = self.acr_cnv_profile_fn
+        """SNV_MAF="${pairName}.snv.maf"
+        INDEL_MAF="${pairName}.indel.maf"
+        python /usr/local/bin/split_maf_indel_snp.py -i ${maf} -o $SNV_MAF -f Variant_Type -v "SNP|DNP|TNP|MNP"
+        python /usr/local/bin/split_maf_indel_snp.py -i ${maf} -o $INDEL_MAF -f Variant_Type -v "INS|DEL" """,
+    
+        'grep -v "NA" ${seg_file} > no_nan_segs.tsv',
+    
+        """
+        awk 'BEGIN{FS=OFS="\t"} {gsub(/^chr/, "", $5)} 1' $SNV_MAF > reformat_snv.maf
+        awk 'BEGIN{FS=OFS="\t"} {gsub(/^chr/, "", $5)} 1' $INDEL_MAF > reformat_indel.maf
+        awk 'BEGIN{FS=OFS="\t"} {gsub(/^chr/, "", $1)} 1' no_nan_segs.tsv > reformat_seg.tsv
+        """,
+        
+    
+        """Rscript /xchip/tcga/Tools/absolute/releases/v1.5/run/ABSOLUTE_cli_start.R \
+        --seg_dat_fn reformat_seg.tsv \
+        --maf_fn reformat_snv.maf \
+        --indelmaf_fn reformat_indel.maf \
+        --sample_name ${pairName} \
+        --results_dir . \
+        --ssnv_skew ${skew} \
+        --abs_lib_dir /xchip/tcga/Tools/absolute/releases/v1.5"""
         
     
 class Patient:
@@ -760,7 +866,7 @@ class Patient:
         focal_num=3,
         p_whole=0.6,
         ratio_clonal=0.5,
-        override=False,
+        overwrite=False,
     ):
         self.arm_num = arm_num
         self.focal_num = focal_num
@@ -771,7 +877,7 @@ class Patient:
         # self.cnv_profile_pkl = f'{self.data_directory}/{self.name}.cnv_events_focal{focal_num}_arm_{arm_num}.pkl'
         self.cnv_profile_pkl = f'{self.data_directory}/{self.name}.cnv_events.pkl'
 
-        if os.path.exists(self.cnv_profile_pkl) and not override:
+        if os.path.exists(self.cnv_profile_pkl) and not overwrite:
             print(f'loading existing CNV pickle file {self.cnv_profile_pkl}')
         else:
             print('Regenerating CNV events.')
@@ -811,13 +917,13 @@ class Patient:
         for sample in self.samples:
             sample.sim_coverage(target_intervals_df, output_dir, sigma, x_coverage, override)
 
-    def set_sample_muts(self):
+    def set_sample_muts(self, overwrite=False):
         output_dir = f'{self.data_directory}/sample_muts'
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
         
         for sample in self.samples:
-            sample.sim_mut_vafs(self.variants_df, self.name, output_dir)
+            sample.sim_mut_vafs(self.variants_df, self.name, output_dir, overwrite=overwrite)
 
     def set_sample_hets(self):
         output_dir = f'{self.data_directory}/sample_hets'
@@ -969,6 +1075,8 @@ class Patient:
             axis=1
         )
 
+        variants_df['Variant_Type'] = 'SNP'
+
         if prepped_gencode_gene_df is not None:
             for i, r in variants_df.iterrows():
     
@@ -980,12 +1088,12 @@ class Patient:
     
                 if not interval_df.empty:
                     variants_df.loc[i, 'gene'] = interval_df.iloc[0][gene_name_col]
-        
+
         self.variants_df = variants_df
         self.variants_df.to_csv(self.variants_fn, sep='\t')
 
     def force_add_variant(
-        self, target_intervals_df, gene, chrom, pos, ref_allele, alt_allele, cluster, allele='paternal'
+        self, target_intervals_df, gene, chrom, pos, ref_allele, alt_allele, cluster, variant_type='SNP', allele='paternal'
     ):
 
         new_variant = {
@@ -996,6 +1104,7 @@ class Patient:
             'alt_allele': alt_allele, 
             'cluster': cluster, 
             'allele': allele, 
+            'Variant_Type': variant_type,
         }
 
         new_variant['interval'] = target_intervals_df.loc[
@@ -1009,6 +1118,47 @@ class Patient:
             new_variant, ignore_index=True
         ).reset_index(drop=True).drop_duplicates()
         self.variants_df.to_csv(self.variants_fn, sep='\t')
+
+    def set_sample_maf2vcf(
+        self,
+        write_vcf_header_path, 
+        local_fasta_file_path, 
+        local_fasta_fai_file_path, 
+    ):
+        sample_vcf_dir = f'{self.data_directory}/sample_mut_vcf'
+        if not os.path.exists(sample_vcf_dir):
+            os.mkdir(sample_vcf_dir)
+
+        for sample in self.samples:
+        
+            sample.maf2vcf( 
+                data_directory=sample_vcf_dir, 
+                write_vcf_header_path=write_vcf_header_path, 
+                local_fasta_file_path=local_fasta_file_path, 
+                local_fasta_fai_file_path=local_fasta_fai_file_path, 
+                control_name=f'{self.name}_n'
+            )
+
+    def set_sample_maf_annot(
+        self,
+        nexus_snp_refseq_annot_tsv,
+    ):
+        annot_df = pd.read_csv(nexus_snp_refseq_annot_tsv, sep='\t')
+        annot_df['Chromosome'] = annot_df['Chromosome'].apply(lambda x: x.replace('chr', '')).replace({'X': '23', 'Y': '24'}).astype(int)
+        annot_df['Start_position'] = annot_df['Position'].copy()
+        annot_df['Detail'] = annot_df['Detail'].replace({'None': np.nan})
+        annot_df['Variant_Classification'] = annot_df.apply(lambda r: r['Detail'] if not pd.isna(r['Detail']) else r['Predicted Function'], axis=1)
+        unique_annot_df = annot_df.drop_duplicates(subset=['Chromosome', 'Position', 'Variant'])
+
+        annot_maf_dir = f'{self.data_directory}/sample_muts_annotated'
+        if not os.path.exists(annot_maf_dir):
+            os.mkdir(annot_maf_dir)
+            
+        for sample in self.samples:
+            sample.annot_variants_df = sample.variants_df.merge(unique_annot_df, on=['Chromosome', 'Start_position'], how='left')
+            sample.annot_variants_fn = f'{annot_maf_dir}/{sample.name}.variants.annotated.tsv'
+            sample.annot_variants_df.to_csv(sample.annot_variants_fn, sep='\t', index=False)
+        
 
     def plot_ccf(self):
         reformat_ccfs_df = self.sample_ccfs_df.stack().reset_index().rename(
@@ -1100,9 +1250,9 @@ class Patient:
             plt.show()
 
 
-    def generate_phylogicNDT_sif(self):
+    def generate_phylogicNDT_sif(self, use_annot_variants=True):
         sampleIDs = [s.name for s in self.samples]
-        sample_mafs = [s.variants_fn for s in self.samples]
+        sample_mafs = [s.annot_variants_fn if use_annot_variants else s.variants_fn for s in self.samples]
         sample_cn_profiles = [''] * len(self.samples)
         purities = [str(s.purity) for s in self.samples]
         times = [str(s.time_point) for s in self.samples]
@@ -1120,13 +1270,14 @@ class Patient:
         self, 
         python2_path='python2',
         phylogicNDT_py_path='/phylogicndt/PhylogicNDT.py',
+        num_iterations=100,
         overwrite=False
     ):
         # See https://github.com/broadinstitute/PhylogicNDT
-        self.phylogicNDT_results_dir = f'{self.data_directory}/phylogicNDT_results'
+        self.phylogicNDT_results_dir = f'{self.data_directory}/phylogicNDT_results_{num_iterations}'
 
         cd_cmd = f'cd {self.phylogicNDT_results_dir}'
-        phylogicNDT_cmd = f'{python2_path} {phylogicNDT_py_path} Cluster -i "{self.name}" -sif "{self.sif_fn}" --maf_input_type "calc_ccf" -rb'
+        phylogicNDT_cmd = f'{python2_path} {phylogicNDT_py_path} Cluster -i "{self.name}" -sif "{self.sif_fn}" --maf_input_type "calc_ccf" -rb -ni {num_iterations}'
         
         full_cmd = cd_cmd + ' && ' + phylogicNDT_cmd
         self.phylogicNDT_full_cmd = full_cmd
@@ -1139,12 +1290,13 @@ class Patient:
                 os.mkdir(self.phylogicNDT_results_dir)
 
             os.system(full_cmd)
-        
-    def set_up_patient_reviewer_data(self):
 
-        self.patient_reviewer_data_dir = f'{self.data_directory}/patient_reviewer_data'
-        if not os.path.exists(self.patient_reviewer_data_dir):
-            os.mkdir(self.patient_reviewer_data_dir)
+        
+    def set_up_cancer_patient_reviewer_data(self):
+
+        self.cancer_patient_reviewer_data_dir = f'{self.data_directory}/cancer_patient_reviewer_data'
+        if not os.path.exists(self.cancer_patient_reviewer_data_dir):
+            os.mkdir(self.cancer_patient_reviewer_data_dir)
         
         sample_data_df = pd.read_csv(self.sif_fn, sep='\t')
         # sample_data_df['absolute_cnv_seg_fn'] = [s.absolute_cnv_profile_fn for s in self.samples]
@@ -1155,9 +1307,9 @@ class Patient:
         sample_data_df['wxs_ploidy'] = [s.ploidy for s in self.samples]
         sample_data_df.rename(columns={'purity': 'wxs_purity', 'timepoint': 'collection_date_dfd'}, inplace=True)
 
-        self.patient_reviewer_sample_data_fn = f'{self.patient_reviewer_data_dir}/{self.name}_samples_data.tsv'
-        sample_data_df.to_csv(self.patient_reviewer_sample_data_fn, sep='\t', index=False)
-        print(f'Generated patient_reviewer_sample_data_fn: {self.patient_reviewer_sample_data_fn}')
+        self.cancer_patient_reviewer_sample_data_fn = f'{self.cancer_patient_reviewer_data_dir}/{self.name}_samples_data.tsv'
+        sample_data_df.to_csv(self.cancer_patient_reviewer_sample_data_fn, sep='\t', index=False)
+        print(f'Generated cancer_patient_reviewer_sample_data_fn: {self.cancer_patient_reviewer_sample_data_fn}')
 
         patient_data_df = pd.DataFrame({
             'participant_id': [self.name], 
@@ -1177,12 +1329,12 @@ class Patient:
             'treatments_fn': self.treatment_fn
         })
 
-        self.patient_reviewer_patient_data_fn = f'{self.patient_reviewer_data_dir}/patient1_data.tsv'
-        patient_data_df.to_csv(self.patient_reviewer_patient_data_fn, sep='\t', index=False)
-        print(f'Generated patient_reviewer_patient_data_fn: {self.patient_reviewer_patient_data_fn}')
+        self.cancer_patient_reviewer_patient_data_fn = f'{self.cancer_patient_reviewer_data_dir}/patient1_data.tsv'
+        patient_data_df.to_csv(self.cancer_patient_reviewer_patient_data_fn, sep='\t', index=False)
+        print(f'Generated cancer_patient_reviewer_patient_data_fn: {self.cancer_patient_reviewer_patient_data_fn}')
 
 
-    def set_all_data(
+    def set_all_data_part1(
         self, 
         arm_num=20,
         focal_num=3,
@@ -1191,13 +1343,13 @@ class Patient:
         target_intervals_df: pd.DataFrame = None,
         normal_vcf_path: str = None,
         local_fasta_file_path: str = None,
+        local_fasta_fai_file_path: str = None,
         genes_df: pd.DataFrame = None,
         num_variants=100,
         variants_random_seed_val=1,
         force_add_variants=[], # [{'gene':, 'chrom':, 'pos':, 'ref_allele':, 'alt_allele':, 'cluster':, 'allele'}]
-        python2_path='/Users/cchu/opt/anaconda3/envs/phylogicNDT_py27_env/bin/python',
-        phylogicNDT_py_path='./src/PhylogicNDT/PhylogicNDT.py',
-        overwrite_phylogicNDT=False,
+        write_vcf_header_path='/Users/cchu/Desktop/Methods/SimulatedTumorData/src/write_vcf_header.py',
+        overwrite=False,
         run_hets=False,
     ):
         self.set_treatments()
@@ -1206,12 +1358,13 @@ class Patient:
             focal_num=focal_num,
             p_whole=p_whole,
             ratio_clonal=ratio_clonal,
+            overwrite=overwrite
         )
         self.set_sample_cnv_profiles()
 
         self.set_sample_coverage(
             target_intervals_df=target_intervals_df, 
-            override=False
+            override=overwrite
         )
 
         if run_hets:
@@ -1223,9 +1376,10 @@ class Patient:
 
         self.set_variants_df(
             target_intervals_df, local_fasta_file_path, genes_df, 
-            num_variants=num_variants, random_seed_val=variants_random_seed_val
+            num_variants=num_variants, random_seed_val=variants_random_seed_val,
+            overwrite=overwrite
         )
-        self.set_sample_muts()
+        self.set_sample_muts(overwrite=overwrite)
 
         for variant_dict in force_add_variants:
             self.force_add_variant(
@@ -1240,14 +1394,34 @@ class Patient:
                 # allele='paternal'
             )
 
-        self.generate_phylogicNDT_sif()
+        self.set_sample_maf2vcf(
+            write_vcf_header_path=write_vcf_header_path, 
+            local_fasta_file_path=local_fasta_file_path, 
+            local_fasta_fai_file_path=local_fasta_fai_file_path, 
+        )
+
+        print(f'Run {self.samples[0].vcf_fn} through (nexus-snp hg19 RefSeq).')
+
+    def set_all_data_part2(
+        self,
+        use_annot_variants=True,
+        nexus_snp_refseq_annot_tsv=None,
+        python2_path='/Users/cchu/opt/anaconda3/envs/phylogicNDT_py27_env/bin/python',
+        phylogicNDT_py_path='./src/PhylogicNDT/PhylogicNDT.py',
+        num_iterations=1000,
+        overwrite=False,
+    ):
+        if use_annot_variants:
+            self.set_sample_maf_annot(nexus_snp_refseq_annot_tsv=nexus_snp_refseq_annot_tsv)
+        self.generate_phylogicNDT_sif(use_annot_variants=use_annot_variants)
         self.run_phylogicNDT(
             python2_path=python2_path,
             phylogicNDT_py_path=phylogicNDT_py_path,
-            overwrite=overwrite_phylogicNDT
+            num_iterations=num_iterations,
+            overwrite=overwrite
         )
 
-        self.set_up_patient_reviewer_data()
+        self.set_up_cancer_patient_reviewer_data()
 
 def prep_gencode_gene_df(gene_tsv_fn='gencode.v19.annotation.gene_only.tsv'):
     genes = pd.read_csv(gene_tsv_fn, sep='\t', header=None)
@@ -1276,11 +1450,11 @@ def load_patients_and_samples(path_to_sim_data='/Users/cchu/Desktop/Methods/Simu
     ]
 
     samples = pd.concat([
-        pd.read_csv(patient.patient_reviewer_sample_data_fn, sep='\t', index_col='sample_id') for patient in loaded_patients
+        pd.read_csv(patient.cancer_patient_reviewer_sample_data_fn, sep='\t', index_col='sample_id') for patient in loaded_patients
     ])
 
     participants = pd.concat([
-        pd.read_csv(patient.patient_reviewer_patient_data_fn, sep='\t', index_col='participant_id') for patient in loaded_patients
+        pd.read_csv(patient.cancer_patient_reviewer_patient_data_fn, sep='\t', index_col='participant_id') for patient in loaded_patients
     ])
 
     return samples, participants
