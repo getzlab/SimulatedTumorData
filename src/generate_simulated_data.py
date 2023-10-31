@@ -717,67 +717,69 @@ class Sample:
         write_vcf_header_path, 
         local_fasta_file_path, 
         local_fasta_fai_file_path, 
-        control_name
+        control_name,
+        overwrite=True
     ):
         self.vcf_fn = f'{data_directory}/{self.name}.variants.vcf'
         # write header
 
-        cd_cmd = f'cd {data_directory}'
-        write_vcf_header_cmd = f'python {write_vcf_header_path} -ref {local_fasta_file_path} -ref_fai {local_fasta_fai_file_path} -o_vcf {self.vcf_fn} -case_name {self.name} -control_name {control_name}'
-        
-        full_cmd = cd_cmd + ' && ' + write_vcf_header_cmd
-        self.full_write_vcf_header_cmd = full_cmd
-        os.system(full_cmd)
+        if overwrite or not os.path.exists(self.vcf_fn):
+            cd_cmd = f'cd {data_directory}'
+            write_vcf_header_cmd = f'python {write_vcf_header_path} -ref {local_fasta_file_path} -ref_fai {local_fasta_fai_file_path} -o_vcf {self.vcf_fn} -case_name {self.name} -control_name {control_name}'
+            
+            full_cmd = cd_cmd + ' && ' + write_vcf_header_cmd
+            self.full_write_vcf_header_cmd = full_cmd
+            os.system(full_cmd)
 
-        # write 
-
-        def get_vcf_df(maf_df, pos_col='Start_position', chrseq_list=list(range(24))):
-            """
-            maf_df : the SNPs to be merged, one position per line
-            """
-            to_vcf_col = {
-                "Chromosome": "#CHROM",
-                pos_col: "POS",
-                "Reference_Allele": "REF",
-                "Tumor_Seq_Allele2": "ALT",
-            }
-            vcf_header = "#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  normal   tumor".split()
-        
-            # unmerged SNPs
-            snp_df = maf_df.assign(
-                tumor=maf_df.apply(
-                    lambda x: "{},{}".format(x["t_ref_count"], x["t_alt_count"]), axis=1
-                ),
-                normal=maf_df.apply(
-                    lambda x: "{},{}".format(x["n_ref_count"], x["n_alt_count"]), axis=1
-                ),
+            # write 
+    
+            def get_vcf_df(maf_df, pos_col='Start_position', chrseq_list=list(range(24))):
+                """
+                maf_df : the SNPs to be merged, one position per line
+                """
+                to_vcf_col = {
+                    "Chromosome": "#CHROM",
+                    pos_col: "POS",
+                    "Reference_Allele": "REF",
+                    "Tumor_Seq_Allele2": "ALT",
+                }
+                vcf_header = "#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  normal   tumor".split()
+            
+                # unmerged SNPs
+                snp_df = maf_df.assign(
+                    tumor=maf_df.apply(
+                        lambda x: "{},{}".format(x["t_ref_count"], x["t_alt_count"]), axis=1
+                    ),
+                    normal=maf_df.apply(
+                        lambda x: "{},{}".format(x["n_ref_count"], x["n_alt_count"]), axis=1
+                    ),
+                )
+                snp_df["contig_id"] = snp_df["Chromosome"].map(lambda x: chrseq_list.index(x))
+                snp_df = snp_df.loc[
+                    :,
+                    [
+                        "Chromosome",
+                        pos_col,
+                        "Reference_Allele",
+                        "Tumor_Seq_Allele2",
+                        "tumor",
+                        "normal",
+                        "contig_id",
+                    ],
+                ].rename(columns=to_vcf_col)
+            
+                # concat two tables
+                return (
+                    snp_df.sort_values(["contig_id", "POS"])
+                    .assign(ID=".", QUAL=".", FILTER="PASS", INFO="SOMATIC", FORMAT="AD")
+                    .loc[:, vcf_header]
+                )
+    
+            vcf_df = get_vcf_df(self.variants_df)
+    
+            vcf_df.to_csv(
+                self.vcf_fn, mode="a", index=False, header=False, sep="\t"
             )
-            snp_df["contig_id"] = snp_df["Chromosome"].map(lambda x: chrseq_list.index(x))
-            snp_df = snp_df.loc[
-                :,
-                [
-                    "Chromosome",
-                    pos_col,
-                    "Reference_Allele",
-                    "Tumor_Seq_Allele2",
-                    "tumor",
-                    "normal",
-                    "contig_id",
-                ],
-            ].rename(columns=to_vcf_col)
-        
-            # concat two tables
-            return (
-                snp_df.sort_values(["contig_id", "POS"])
-                .assign(ID=".", QUAL=".", FILTER="PASS", INFO="SOMATIC", FORMAT="AD")
-                .loc[:, vcf_header]
-            )
-
-        vcf_df = get_vcf_df(self.variants_df)
-
-        vcf_df.to_csv(
-            self.vcf_fn, mode="a", index=False, header=False, sep="\t"
-        )
         
         
     def run_absolute(
@@ -1124,6 +1126,7 @@ class Patient:
         write_vcf_header_path, 
         local_fasta_file_path, 
         local_fasta_fai_file_path, 
+        overwrite=False,
     ):
         sample_vcf_dir = f'{self.data_directory}/sample_mut_vcf'
         if not os.path.exists(sample_vcf_dir):
@@ -1136,7 +1139,8 @@ class Patient:
                 write_vcf_header_path=write_vcf_header_path, 
                 local_fasta_file_path=local_fasta_file_path, 
                 local_fasta_fai_file_path=local_fasta_fai_file_path, 
-                control_name=f'{self.name}_n'
+                control_name=f'{self.name}_n',
+                overwrite=overwrite
             )
 
     def set_sample_maf_annot(
@@ -1411,7 +1415,7 @@ class Patient:
         num_iterations=1000,
         overwrite=False,
     ):
-        if use_annot_variants:
+        if use_annot_variants and (nexus_snp_refseq_annot_tsv is not None):
             self.set_sample_maf_annot(nexus_snp_refseq_annot_tsv=nexus_snp_refseq_annot_tsv)
         self.generate_phylogicNDT_sif(use_annot_variants=use_annot_variants)
         self.run_phylogicNDT(
