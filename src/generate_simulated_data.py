@@ -662,6 +662,7 @@ class Sample:
                 'gene': 'Hugo_Symbol'
             }
         )
+        
         sample_variants_df = sample_variants_df[[
             'Hugo_Symbol', 
             'Chromosome',
@@ -782,33 +783,72 @@ class Sample:
         
     def run_absolute(
         self, 
-        R_path,
-        absolute_src_path,
+        data_directory,
+        R_path='Rscript',
+        absolute_split_maf_indel_snp_python_path="./src/ABSOLUTE/src/split_maf_indel_snp.py",
+        absolute_dir='./src/ABSOLUTE/v1.5',
+        skew=1,
+        run_cmds=True
     ):
-        maf = self.variants_fn
-        seg_file = self.acr_cnv_profile_fn
-        """SNV_MAF="${pairName}.snv.maf"
-        INDEL_MAF="${pairName}.indel.maf"
-        python /usr/local/bin/split_maf_indel_snp.py -i ${maf} -o $SNV_MAF -f Variant_Type -v "SNP|DNP|TNP|MNP"
-        python /usr/local/bin/split_maf_indel_snp.py -i ${maf} -o $INDEL_MAF -f Variant_Type -v "INS|DEL" """,
+        # split data
+        self.split_snp_fn = f'{data_directory}/{self.name}.snp.tsv'
+        self.split_indel_fn = f'{data_directory}/{self.name}.indel.tsv'
+        self.split_snp_cmd = f'python {absolute_split_maf_indel_snp_python_path} -i {self.annot_variants_fn} -o {self.split_snp_fn} -f Variant_Type -v "SNP|DNP|TNP|MNP"'
+        self.split_indel_cmd = f'python {absolute_split_maf_indel_snp_python_path} -i {self.annot_variants_fn} -o {self.split_indel_fn} -f Variant_Type -v "INS|DEL"'
     
-        'grep -v "NA" ${seg_file} > no_nan_segs.tsv',
-    
-        """
-        awk 'BEGIN{FS=OFS="\t"} {gsub(/^chr/, "", $5)} 1' $SNV_MAF > reformat_snv.maf
-        awk 'BEGIN{FS=OFS="\t"} {gsub(/^chr/, "", $5)} 1' $INDEL_MAF > reformat_indel.maf
-        awk 'BEGIN{FS=OFS="\t"} {gsub(/^chr/, "", $1)} 1' no_nan_segs.tsv > reformat_seg.tsv
-        """,
+        self.no_nan_segs_fn = f'{data_directory}/no_nan_segs.tsv'
+        self.no_nan_segs_cmd = f'grep -v "NA" {self.acr_cnv_profile_fn} > {self.no_nan_segs_fn}'
         
+        #reformat chromosome
+        col_5_awk_cmd = 'BEGIN{FS=OFS="\t"} {gsub(/^chr/, "", $5)}'
+        
+        self.split_snp_reformat_fn = f'{data_directory}/{self.name}.snp.reformat.maf'
+        self.split_indel_reformat_fn = f'{data_directory}/{self.name}.indel.reformat.maf'
+        self.snp_reformat_cmd = f"awk '{col_5_awk_cmd} 1' {self.split_snp_fn} > {self.split_snp_reformat_fn}"
+        self.indel_reformat_cmd = f"awk '{col_5_awk_cmd} 1' {self.split_indel_fn} > {self.split_indel_reformat_fn}"
     
-        """Rscript /xchip/tcga/Tools/absolute/releases/v1.5/run/ABSOLUTE_cli_start.R \
-        --seg_dat_fn reformat_seg.tsv \
-        --maf_fn reformat_snv.maf \
-        --indelmaf_fn reformat_indel.maf \
-        --sample_name ${pairName} \
-        --results_dir . \
-        --ssnv_skew ${skew} \
-        --abs_lib_dir /xchip/tcga/Tools/absolute/releases/v1.5"""
+        col_1_awk_cmd = 'BEGIN{FS=OFS="\t"} {gsub(/^chr/, "", $1)}'
+        self.reformat_seg_fn = f'{data_directory}/{self.name}.no_nan_segs.reformat.tsv'
+        self.seg_reformat_cmd = f"awk '{col_1_awk_cmd} 1' {self.no_nan_segs_fn} > {self.reformat_seg_fn}"
+    
+    
+        # absolute
+        self.absolute_results_data_dir = f'{data_directory}/ABSOLUTE_results'
+        self.absolute_cmd = f"""{R_path} {absolute_dir}/run/ABSOLUTE_cli_start.R \
+        --seg_dat_fn {self.reformat_seg_fn} \
+        --maf_fn {self.split_snp_reformat_fn} \
+        --indelmaf_fn {self.split_indel_reformat_fn} \
+        --sample_name {self.name} \
+        --results_dir {self.absolute_results_data_dir} \
+        --ssnv_skew {skew} \
+        --abs_lib_dir {absolute_dir}"""
+
+        self.pp_calls_tab_fn = f'{self.absolute_results_data_dir}/{self.name}.PP-calls_tab.txt'
+        self.mv_pp_calls_tab_cmd = f'mv {self.name}.PP-calls_tab.txt {self.pp_calls_tab_fn}'
+
+        self.pp_modes_data_fn = f'{self.absolute_results_data_dir}/{self.name}.PP-modes.data.RData'
+        self.mv_pp_modes_data_cmd = f'mv {self.name}.PP-modes.data.RData {self.pp_modes_data_fn}'
+
+        self.pp_modes_plots_fn = f'{self.absolute_results_data_dir}/{self.name}.PP-modes.plots.pdf'
+        self.mv_pp_modes_plots_cmd = f'mv {self.name}.PP-modes.plots.pdf {self.pp_modes_plots_fn}'
+
+        if run_cmds:
+            os.system(self.split_snp_cmd)
+            os.system(self.split_indel_cmd)
+            os.system(self.no_nan_segs_cmd)
+            
+            os.system(self.snp_reformat_cmd)
+            os.system(self.indel_reformat_cmd)
+            os.system(self.seg_reformat_cmd)
+            
+            os.system(self.absolute_cmd)
+
+            os.system(self.mv_pp_calls_tab_cmd)
+            os.system(self.mv_pp_modes_data_cmd)
+            os.system(self.mv_pp_modes_plots_cmd)
+        else:
+            print(f'Not running commands. Outputs in {self.absolute_results_data_dir}')
+    
         
     
 class Patient:
@@ -1148,6 +1188,12 @@ class Patient:
         annot_df['Start_position'] = annot_df['Position'].copy()
         annot_df['Detail'] = annot_df['Detail'].replace({'None': np.nan})
         annot_df['Variant_Classification'] = annot_df.apply(lambda r: r['Detail'] if not pd.isna(r['Detail']) else r['Predicted Function'], axis=1)
+
+        annot_df["Protein_Change"] = annot_df.apply(
+            lambda r: np.nan if r['AA Change'] == 'None' else f"p.{r['AA Change'].split('>')[0]}{r['AA Position']}{r['AA Change'].split('>')[1]}", 
+            axis=1
+        )
+        annot_df['UniProt_AApos'] = annot_df['AA Position'].replace({'None': np.nan}).copy()
         unique_annot_df = annot_df.drop_duplicates(subset=['Chromosome', 'Position', 'Variant'])
 
         annot_maf_dir = f'{self.data_directory}/sample_muts_annotated'
@@ -1159,7 +1205,7 @@ class Patient:
             sample.annot_variants_fn = f'{annot_maf_dir}/{sample.name}.variants.annotated.tsv'
             sample.annot_variants_df.to_csv(sample.annot_variants_fn, sep='\t', index=False)
         
-
+    
     def plot_ccf(self):
         reformat_ccfs_df = self.sample_ccfs_df.stack().reset_index().rename(
             columns={'level_0': 'Sample', 'level_1': 'Cluster', 0: 'Cancer Cell Fraction (CCF)'}
@@ -1174,7 +1220,7 @@ class Patient:
         plt.legend(bbox_to_anchor=(1, 1), title='Clusters')
         plt.title(f'{self.name} CCF plot')
 
-    def plot_tree(self, image_path='base64uri'):        
+    def plot_tree(self, image_path='base64uri', port=8050):        
         edges = [f'{child}-{parent}' for parent, child in self.parents.items()]
         
         cluster_list = []
@@ -1242,7 +1288,7 @@ class Patient:
             tree_plot,
             html.Button('save image', id='save-image-button', n_clicks=0)
         ])
-        app.run(debug=False)
+        app.run(debug=False, port=port)
 
     def plot_sample_hets(self, **kwargs):
         for sample in self.samples:
@@ -1265,6 +1311,31 @@ class Patient:
 
         self.sif_fn = sif_fn
         print(f'Generated sif file: {self.sif_fn}')
+
+    def run_ABSOLUTE_samples(
+        self,
+        R_path='Rscript',
+        absolute_split_maf_indel_snp_python_path="./src/ABSOLUTE/src/split_maf_indel_snp.py",
+        absolute_dir='./src/ABSOLUTE/v1.5',
+        run_cmds=False
+    ):
+
+        output_ABSOLUTE_dir = f'{self.data_directory}/sample_ABSOLUTE_results'
+        if not os.path.exists(output_ABSOLUTE_dir):
+            os.mkdir(output_ABSOLUTE_dir)
+            
+        for sample in self.samples:
+            sample_output_ABSOLUTE_dir = f'{output_ABSOLUTE_dir}/{sample.name}'
+            if not os.path.exists(sample_output_ABSOLUTE_dir):
+                os.mkdir(sample_output_ABSOLUTE_dir)
+            sample.run_absolute(
+                data_directory=sample_output_ABSOLUTE_dir,
+                R_path=R_path,
+                absolute_split_maf_indel_snp_python_path=absolute_split_maf_indel_snp_python_path,
+                absolute_dir=absolute_dir,
+                skew=1,
+                run_cmds=run_cmds
+            )
 
     def run_phylogicNDT(
         self, 
@@ -1307,6 +1378,26 @@ class Patient:
         sample_data_df['wxs_ploidy'] = [s.ploidy for s in self.samples]
         sample_data_df.rename(columns={'purity': 'wxs_purity', 'timepoint': 'collection_date_dfd'}, inplace=True)
 
+        sample_data_df['ABSOLUTE_pp_calls_tab_fn'] = [s.pp_calls_tab_fn for s in self.samples]
+        sample_data_df['ABSOLUTE_pp_modes_data_fn'] = [s.pp_modes_data_fn for s in self.samples]
+        sample_data_df['ABSOLUTE_pp_modes_plots_fn'] = [s.pp_modes_plots_fn for s in self.samples]
+
+        sample_data_df['ABSOLUTE_mode_res_rds_fn'] = [
+            f'{s.absolute_results_data_dir}/{s.name}.ABSOLUTE_mode.res.Rds' for s in self.samples
+        ]
+        sample_data_df['ABSOLUTE_mode_tab_fn'] = [
+            f'{s.absolute_results_data_dir}/{s.name}.ABSOLUTE_mode.tab.Rds' for s in self.samples
+        ]
+        sample_data_df['ABSOLUTE_plot_fn'] = [
+            f'{s.absolute_results_data_dir}/{s.name}.ABSOLUTE_plot.pdf' for s in self.samples
+        ]
+        sample_data_df['ABSOLUTE_SSNV_mode_res_rds_fn'] = [
+            f'{s.absolute_results_data_dir}/{s.name}.ABSOLUTE_SSNV.mode.res.Rds' for s in self.samples
+        ]
+        sample_data_df['ABSOLUTE_RData'] = [
+            f'{s.absolute_results_data_dir}/{s.name}.ABSOLUTE.RData' for s in self.samples
+        ]
+
         self.cancer_patient_reviewer_sample_data_fn = f'{self.cancer_patient_reviewer_data_dir}/{self.name}_samples_data.tsv'
         sample_data_df.to_csv(self.cancer_patient_reviewer_sample_data_fn, sep='\t', index=False)
         print(f'Generated cancer_patient_reviewer_sample_data_fn: {self.cancer_patient_reviewer_sample_data_fn}')
@@ -1329,7 +1420,7 @@ class Patient:
             'treatments_fn': self.treatment_fn
         })
 
-        self.cancer_patient_reviewer_patient_data_fn = f'{self.cancer_patient_reviewer_data_dir}/patient1_data.tsv'
+        self.cancer_patient_reviewer_patient_data_fn = f'{self.cancer_patient_reviewer_data_dir}/{self.name}_data.tsv'
         patient_data_df.to_csv(self.cancer_patient_reviewer_patient_data_fn, sep='\t', index=False)
         print(f'Generated cancer_patient_reviewer_patient_data_fn: {self.cancer_patient_reviewer_patient_data_fn}')
 
@@ -1410,6 +1501,9 @@ class Patient:
         phylogicNDT_py_path='./src/PhylogicNDT/PhylogicNDT.py',
         num_iterations=1000,
         overwrite=False,
+        R_path='Rscript',
+        absolute_split_maf_indel_snp_python_path="./src/ABSOLUTE/src/split_maf_indel_snp.py",
+        absolute_dir='./src/ABSOLUTE/v1.5',
     ):
         if use_annot_variants:
             self.set_sample_maf_annot(nexus_snp_refseq_annot_tsv=nexus_snp_refseq_annot_tsv)
@@ -1419,6 +1513,13 @@ class Patient:
             phylogicNDT_py_path=phylogicNDT_py_path,
             num_iterations=num_iterations,
             overwrite=overwrite
+        )
+
+        self.run_ABSOLUTE_samples(
+            R_path='Rscript',
+            absolute_split_maf_indel_snp_python_path="./src/ABSOLUTE/src/split_maf_indel_snp.py",
+            absolute_dir='./src/ABSOLUTE/v1.5',
+            run_cmds=overwrite
         )
 
         self.set_up_cancer_patient_reviewer_data()

@@ -1,0 +1,2 @@
+# split from p1_t2.variants.annotated.tsv
+Hugo_Symbol	Chromosome	Start_position	Reference_Allele	Tumor_Seq_Allele2	Variant_Type	t_alt_count	t_ref_count	n_alt_count	n_ref_count	local_cn_a1	local_cn_a2	cluster	allele	avg_covcorr	ploidy	overlapping_CN_events	alt_overlapping_CN_events	multiplicity	vaf	sample_id	participant_id	Variation ID	Position	Variant	Strand	Gene	Transcript	Entrez Gene	Predicted Function	CDNA Position	CDS Position	AA Position	AA Change	Detail	Splice Distance	Proteins	Variant_Classification	Protein_Change	UniProt_AApos

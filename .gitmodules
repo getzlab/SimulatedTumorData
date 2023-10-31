@@ -1,3 +1,6 @@
 [submodule "src/PhylogicNDT"]
 	path = src/PhylogicNDT
 	url = git@github.com:broadinstitute/PhylogicNDT.git
+[submodule "src/ABSOLUTE"]
+	path = src/ABSOLUTE
+	url = git@github.com:getzlab/ABSOLUTE.git

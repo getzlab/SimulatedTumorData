@@ -1,0 +1,2 @@
+array	sample	call status	purity	ploidy	Genome doublings	delta	Coverage for 80% power	Cancer DNA fraction	Subclonal genome fraction	tau	E_CR
+p2_t2	p2_t2	called	0.85	2.02	0	0.42	9	0.85	0.09	2.00868658964993	0.992163837744939
