@@ -206,7 +206,7 @@ class Sample:
         self.clone_ccfs = clone_ccfs
         return self.clone_ccfs
 
-    def set_cnv_profile(self, num_subclones, parents, event_trees, data_directory, drop_sex_chr=True):
+    def set_cnv_profile(self, num_subclones, parents, event_trees, data_directory, drop_sex_chr=True, cnv_sigma_random_seed=0):
         phylogeny = simulate.CNV_Profile().phylogeny
         phy_dict = {
             'num_subclones': num_subclones,
@@ -224,7 +224,8 @@ class Sample:
         cnv_profile.cnv_profile_df['n_probes'] = (cnv_profile.cnv_profile_df['length'] * 0.00005).astype(int)
         cnv_profile.cnv_profile_df['n_hets'] = (cnv_profile.cnv_profile_df['length'] * 0.000001).astype(int)
         cnv_profile.cnv_profile_df['tau'] = cnv_profile.cnv_profile_df['mu.major'] + cnv_profile.cnv_profile_df['mu.minor']
-        
+
+        np.random.seed(cnv_sigma_random_seed)
         cnv_profile.cnv_profile_df['sigma.minor'] = np.random.exponential(0.01, size=len(cnv_profile.cnv_profile_df))
         cnv_profile.cnv_profile_df['sigma.major'] = cnv_profile.cnv_profile_df['sigma.minor']
         cnv_profile.cnv_profile_df['sigma.tau'] = cnv_profile.cnv_profile_df['sigma.minor'] * 2
@@ -719,7 +720,7 @@ class Sample:
         local_fasta_file_path, 
         local_fasta_fai_file_path, 
         control_name,
-        overwrite=True
+        overwrite=False
     ):
         self.vcf_fn = f'{data_directory}/{self.name}.variants.vcf'
         # write header
@@ -731,7 +732,7 @@ class Sample:
             full_cmd = cd_cmd + ' && ' + write_vcf_header_cmd
             self.full_write_vcf_header_cmd = full_cmd
             os.system(full_cmd)
-
+    
             # write 
     
             def get_vcf_df(maf_df, pos_col='Start_position', chrseq_list=list(range(24))):
@@ -1166,7 +1167,7 @@ class Patient:
         write_vcf_header_path, 
         local_fasta_file_path, 
         local_fasta_fai_file_path, 
-        overwrite=False,
+        overwrite=False
     ):
         sample_vcf_dir = f'{self.data_directory}/sample_mut_vcf'
         if not os.path.exists(sample_vcf_dir):
