@@ -1483,7 +1483,6 @@ class Patient:
             num_variants=num_variants, random_seed_val=variants_random_seed_val,
             overwrite=overwrite
         )
-        self.set_sample_muts(overwrite=overwrite)
 
         for variant_dict in force_add_variants:
             self.force_add_variant(
@@ -1497,6 +1496,8 @@ class Patient:
                 # cluster=3, 
                 # allele='paternal'
             )
+
+        self.set_sample_muts(overwrite=overwrite)
 
         self.set_sample_maf2vcf(
             write_vcf_header_path=write_vcf_header_path, 
