@@ -1538,7 +1538,7 @@ def prep_gencode_gene_df(gene_tsv_fn='gencode.v19.annotation.gene_only.tsv'):
     genes['gene'] = genes.data.apply(lambda x: re.findall('gene_name "(.*?)"', x)[0].strip())
     return genes
 
-def load_patients_and_samples(path_to_sim_data='/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data', patient_names=None):
+def load_patients_and_samples(nexus_seq_file_format='refseq_SimulatedTumor_{}.txt', path_to_sim_data='/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data', patient_names=None):
 
     def load_patient_pkl_fn(pkl_fn):
         with open(pkl_fn, 'rb') as fh:
@@ -1547,7 +1547,7 @@ def load_patients_and_samples(path_to_sim_data='/Users/cchu/Desktop/Methods/Simu
         patient.data_directory = pkl_fn.rsplit('/', 1)[0]
         print(patient.phylogicNDT_results_dir)
         patient.set_all_data_part1()
-        patient.set_all_data_part2()
+        patient.set_all_data_part2(nexus_snp_refseq_annot_tsv=f'{path_to_sim_data}/{patient.name}/{nexus_seq_file_format.format(patient.name)}')
         return patient
 
     if patient_names is None:
