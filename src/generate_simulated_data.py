@@ -261,11 +261,13 @@ class Sample:
             ploidy=self.ploidy, 
             avg_cn=calc_avg_cn(acr_cnv_profile_df, allele_col='mu.minor', total_cn_col='tau')
         )
-        acr_cnv_profile_df['mu.minor'] = acr_cnv_profile_df['mu.minor'] * cn_delta + cn_zero
-        acr_cnv_profile_df['mu.major'] = acr_cnv_profile_df['mu.major'] * cn_delta + cn_zero
-        acr_cnv_profile_df['sigma.minor'] = acr_cnv_profile_df['sigma.minor'] / cn_delta
-        acr_cnv_profile_df['sigma.major'] = acr_cnv_profile_df['sigma.minor'] / cn_delta
-        acr_cnv_profile_df['sigma.tau'] = acr_cnv_profile_df['sigma.tau'] / cn_delta
+        self.cn_zero = cn_zero
+        self.cn_delta = cn_delta
+        acr_cnv_profile_df['mu.minor'] = acr_cnv_profile_df['mu.minor'] * self.cn_delta + self.cn_zero
+        acr_cnv_profile_df['mu.major'] = acr_cnv_profile_df['mu.major'] * self.cn_delta + self.cn_zero
+        acr_cnv_profile_df['sigma.minor'] = acr_cnv_profile_df['sigma.minor'] / self.cn_delta
+        acr_cnv_profile_df['sigma.major'] = acr_cnv_profile_df['sigma.minor'] / self.cn_delta
+        acr_cnv_profile_df['sigma.tau'] = acr_cnv_profile_df['sigma.tau'] / self.cn_delta
 
 
         if drop_sex_chr:
@@ -1211,16 +1213,21 @@ class Patient:
             sample.annot_variants_df.to_csv(sample.annot_variants_fn, sep='\t', index=False)
         
     
-    def plot_ccf(self):
+    def plot_ccf(self, custom_palette=None):
         reformat_ccfs_df = self.sample_ccfs_df.stack().reset_index().rename(
             columns={'level_0': 'Sample', 'level_1': 'Cluster', 0: 'Cancer Cell Fraction (CCF)'}
         )
+        if custom_palette is None:
+            palette = [cluster_color(i) for i in reformat_ccfs_df.Cluster.unique()]
+        else:
+            palette = custom_palette
+            
         sns.lineplot(
             data=reformat_ccfs_df, 
             x='Sample', 
             y='Cancer Cell Fraction (CCF)', 
             hue='Cluster', 
-            palette=[cluster_color(i) for i in reformat_ccfs_df.Cluster.unique()], 
+            palette=palette,
         )
         plt.legend(bbox_to_anchor=(1, 1), title='Clusters')
         plt.title(f'{self.name} CCF plot')
@@ -1377,6 +1384,7 @@ class Patient:
         sample_data_df = pd.read_csv(self.sif_fn, sep='\t')
         # sample_data_df['absolute_cnv_seg_fn'] = [s.absolute_cnv_profile_fn for s in self.samples]
         sample_data_df['cnv_seg_fn'] = [s.acr_cnv_profile_fn for s in self.samples]
+        sample_data_df['absolute_cnv_seg_fn'] = [s.absolute_cnv_profile_fn for s in self.samples]
         sample_data_df.drop(['seg_fn'], axis=1, inplace=True)
         sample_data_df['participant_id'] = self.name
         sample_data_df['preservation_method'] = np.nan
