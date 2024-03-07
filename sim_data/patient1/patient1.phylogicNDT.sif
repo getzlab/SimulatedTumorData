@@ -1,4 +1,4 @@
 sample_id	maf_fn	seg_fn	purity	timepoint
-p1_t1	SimulatedTumorData/sim_data/patient1/sample_muts_annotated/p1_t1.variants.annotated.tsv		0.7	50
-p1_t2	SimulatedTumorData/sim_data/patient1/sample_muts_annotated/p1_t2.variants.annotated.tsv		0.45	100
-p1_t3	SimulatedTumorData/sim_data/patient1/sample_muts_annotated/p1_t3.variants.annotated.tsv		0.9	120
+p1_t1	sim_data/patient1/sample_muts_annotated/p1_t1.variants.annotated.tsv		0.7	50
+p1_t2	sim_data/patient1/sample_muts_annotated/p1_t2.variants.annotated.tsv		0.45	100
+p1_t3	sim_data/patient1/sample_muts_annotated/p1_t3.variants.annotated.tsv		0.9	120

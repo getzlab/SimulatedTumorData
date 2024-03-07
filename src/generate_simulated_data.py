@@ -1547,23 +1547,33 @@ def prep_gencode_gene_df(gene_tsv_fn='gencode.v19.annotation.gene_only.tsv'):
     genes['gene'] = genes.data.apply(lambda x: re.findall('gene_name "(.*?)"', x)[0].strip())
     return genes
 
+def load_patient_pkl_fn(pkl_fn, path_to_sim_data, nexus_seq_file_format):
+    with open(pkl_fn, 'rb') as fh:
+        patient = pickle.load(fh)
+
+    patient.data_directory = pkl_fn.rsplit('/', 1)[0]
+    print(patient.phylogicNDT_results_dir)
+    patient.set_all_data_part1()
+    patient.set_all_data_part2(nexus_snp_refseq_annot_tsv=f'{path_to_sim_data}/{patient.name}/{nexus_seq_file_format.format(patient.name)}')
+    return patient
+
 def load_patients_and_samples(nexus_seq_file_format='refseq_SimulatedTumor_{}.txt', path_to_sim_data='/Users/cchu/Desktop/Methods/SimulatedTumorData/sim_data', patient_names=None):
 
-    def load_patient_pkl_fn(pkl_fn):
-        with open(pkl_fn, 'rb') as fh:
-            patient = pickle.load(fh)
+    # def load_patient_pkl_fn(pkl_fn):
+    #     with open(pkl_fn, 'rb') as fh:
+    #         patient = pickle.load(fh)
     
-        patient.data_directory = pkl_fn.rsplit('/', 1)[0]
-        print(patient.phylogicNDT_results_dir)
-        patient.set_all_data_part1()
-        patient.set_all_data_part2(nexus_snp_refseq_annot_tsv=f'{path_to_sim_data}/{patient.name}/{nexus_seq_file_format.format(patient.name)}')
-        return patient
+    #     patient.data_directory = pkl_fn.rsplit('/', 1)[0]
+    #     print(patient.phylogicNDT_results_dir)
+    #     patient.set_all_data_part1()
+    #     patient.set_all_data_part2(nexus_snp_refseq_annot_tsv=f'{path_to_sim_data}/{patient.name}/{nexus_seq_file_format.format(patient.name)}')
+    #     return patient
 
     if patient_names is None:
         patient_names = pd.read_csv(f'{path_to_sim_data}/patients_pickle_objects.tsv', sep='\t', index_col=0).index.tolist()
     # insert your local path to sim_data
     loaded_patients = [
-        load_patient_pkl_fn(f'{path_to_sim_data}/{patient_name}/{patient_name}.pkl') for patient_name in patient_names
+        load_patient_pkl_fn(f'{path_to_sim_data}/{patient_name}/{patient_name}.pkl', path_to_sim_data, nexus_seq_file_format) for patient_name in patient_names
     ]
 
     samples = pd.concat([
