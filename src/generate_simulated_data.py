@@ -912,6 +912,32 @@ class Sample:
         else:
             print(f'Not running commands. Outputs in {self.absolute_results_data_dir}')
 
+    def run_absolute_extract(
+        self,
+        data_directory,
+        solution_number=1,
+        R_path='Rscript',
+        absolute_dir='./src/ABSOLUTE/v1.5',
+        skew=1,
+        run_cmds=True
+    ):
+
+        self.absolute_extract_results_data_dir = f'{data_directory}/ABSOLUTE_extract_soln{solution_number}_results'
+        
+        self.absolute_extract_cmd = f"""{R_path} {absolute_dir}/run/ABSOLUTE_extract_cli_start.R --solution_num {solution_number} --analyst_id force_called --rdata_modes_fn {self.pp_modes_data_fn} --sample_name {self.name} --results_dir {self.absolute_extract_results_data_dir} --abs_lib_dir {absolute_dir}"""
+        
+        if run_cmds:
+            os.system(self.no_nan_segs_cmd )
+    
+            os.system(self.snp_reformat_cmd)
+            os.system(self.indel_reformat_cmd)
+            os.system(self.seg_reformat_cmd)
+            
+            os.system(self.absolute_extract_cmd)
+    
+        else:
+            print(f'Not running commands. Outputs in {self.absolute_results_data_dir}')
+
     
 class Patient:
 
@@ -1430,6 +1456,41 @@ class Patient:
                 run_cmds=run_cmds
             )
 
+    def run_ABSOLUTE_extract_samples(
+        self,
+        R_path='Rscript',
+        absolute_dir='./src/ABSOLUTE/v1.5',
+        run_cmds=False,
+        sample_solutions_dict=None
+    ):
+
+        output_ABSOLUTE_extract_dir = f'{self.data_directory}/sample_ABSOLUTE_extract_results'
+        if not os.path.exists(output_ABSOLUTE_extract_dir):
+            os.mkdir(output_ABSOLUTE_extract_dir)
+
+        if sample_solutions_dict is None:
+            sample_solutions_dict = {}
+
+            # default to first solution
+            for sample in self.samples:
+                sample_solutions_dict[sample.name] = 1
+                
+        for sample in self.samples:
+            sample_output_ABSOLUTE_extract_dir = f'{output_ABSOLUTE_extract_dir}/{sample.name}'
+            if not os.path.exists(sample_output_ABSOLUTE_extract_dir):
+                os.mkdir(sample_output_ABSOLUTE_extract_dir)
+            
+            sample.run_absolute_extract(
+                sample_output_ABSOLUTE_extract_dir,
+                solution_number=sample_solutions_dict[sample.name],
+                R_path=R_path,
+                absolute_dir=absolute_dir,
+                skew=1,
+                run_cmds=run_cmds
+            )
+
+            
+
     def run_phylogicNDT(
         self, 
         python2_path='python2',
@@ -1618,6 +1679,12 @@ class Patient:
         )
 
         self.run_ABSOLUTE_segforcecall_samples(
+            R_path='Rscript',
+            absolute_dir='./src/ABSOLUTE/v1.5',
+            run_cmds=overwrite
+        )
+
+        self.run_ABSOLUTE_extract_samples(
             R_path='Rscript',
             absolute_dir='./src/ABSOLUTE/v1.5',
             run_cmds=overwrite
