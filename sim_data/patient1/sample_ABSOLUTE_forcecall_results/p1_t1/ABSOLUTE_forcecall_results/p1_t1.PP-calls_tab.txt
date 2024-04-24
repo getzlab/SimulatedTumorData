@@ -1,0 +1,2 @@
+array	sample	call status	purity	ploidy	Genome doublings	delta	Coverage for 80% power	Cancer DNA fraction	Subclonal genome fraction	tau	E_CR
+p1_t1	p1_t1	high non-clonal	0.7	1.72	0	0.39	10	0.67	0.91	1.83	0.855452069184923

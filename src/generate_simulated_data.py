@@ -854,7 +854,64 @@ class Sample:
         else:
             print(f'Not running commands. Outputs in {self.absolute_results_data_dir}')
     
+
+
+    def run_absolute_segforcecall(
+        self,
+        data_directory,
+        R_path='Rscript',
+        absolute_dir='./src/ABSOLUTE/v1.5',
+        skew=1,
+        run_cmds=True
+    ):
+    
+        self.no_nan_segs_fn = f'{data_directory}/no_nan_segs.tsv'
+        self.no_nan_segs_cmd = f'grep -v "NA" {self.acr_cnv_profile_fn} > {self.no_nan_segs_fn}'
+    
+    
+        #reformat chromosome
+        col_5_awk_cmd = 'BEGIN{FS=OFS="\t"} {gsub(/^chr/, "", $5)}'
         
+        self.split_snp_reformat_fn = f'{data_directory}/{self.name}.snp.reformat.maf'
+        self.split_indel_reformat_fn = f'{data_directory}/{self.name}.indel.reformat.maf'
+        self.snp_reformat_cmd = f"awk '{col_5_awk_cmd} 1' {self.split_snp_fn} > {self.split_snp_reformat_fn}"
+        self.indel_reformat_cmd = f"awk '{col_5_awk_cmd} 1' {self.split_indel_fn} > {self.split_indel_reformat_fn}"
+    
+        col_1_awk_cmd = 'BEGIN{FS=OFS="\t"} {gsub(/^chr/, "", $1)}'
+        self.reformat_seg_fn = f'{data_directory}/{self.name}.no_nan_segs.reformat.tsv'
+        self.seg_reformat_cmd = f"awk '{col_1_awk_cmd} 1' {self.no_nan_segs_fn} > {self.reformat_seg_fn}"
+    
+        self.absolute_forcecall_results_data_dir = f'{data_directory}/ABSOLUTE_forcecall_results'
+        self.absolute_forcecall_cmd_1 = f"""{R_path} {absolute_dir}/run/ABSOLUTE_cli_start.R \
+            --seg_dat_fn {self.reformat_seg_fn} \
+            --maf_fn {self.split_snp_reformat_fn} \
+            --indelmaf_fn {self.split_indel_reformat_fn} \
+            --sample_name {self.name} \
+            --results_dir {self.absolute_forcecall_results_data_dir} \
+            --ssnv_skew {skew} \
+            --force_alpha {self.purity} \
+            --force_tau {self.ploidy} \
+            --abs_lib_dir {absolute_dir}"""
+    
+        mv_cmd = f"mv {self.name}.PP* {self.absolute_forcecall_results_data_dir}/"
+        
+        self.absolute_forcecall_cmd_2 = f"""{R_path} {absolute_dir}/run/ABSOLUTE_extract_cli_start.R --solution_num 1 --analyst_id force_called --rdata_modes_fn {self.absolute_forcecall_results_data_dir}/{self.name}.PP-modes.data.RData --sample_name {self.name} --results_dir {self.absolute_forcecall_results_data_dir} --abs_lib_dir {absolute_dir}"""
+        
+        if run_cmds:
+            os.system(self.no_nan_segs_cmd )
+    
+            os.system(self.snp_reformat_cmd)
+            os.system(self.indel_reformat_cmd)
+            os.system(self.seg_reformat_cmd)
+            
+            os.system(self.absolute_forcecall_cmd_1)
+    
+            os.system(mv_cmd)
+            
+            os.system(self.absolute_forcecall_cmd_2)
+        else:
+            print(f'Not running commands. Outputs in {self.absolute_results_data_dir}')
+
     
 class Patient:
 
@@ -1349,6 +1406,30 @@ class Patient:
                 run_cmds=run_cmds
             )
 
+    def run_ABSOLUTE_segforcecall_samples(
+        self,
+        R_path='Rscript',
+        absolute_dir='./src/ABSOLUTE/v1.5',
+        run_cmds=False
+    ):
+
+        output_ABSOLUTE_fc_dir = f'{self.data_directory}/sample_ABSOLUTE_forcecall_results'
+        if not os.path.exists(output_ABSOLUTE_fc_dir):
+            os.mkdir(output_ABSOLUTE_fc_dir)
+            
+        for sample in self.samples:
+            sample_output_ABSOLUTE_fc_dir = f'{output_ABSOLUTE_fc_dir}/{sample.name}'
+            if not os.path.exists(sample_output_ABSOLUTE_fc_dir):
+                os.mkdir(sample_output_ABSOLUTE_fc_dir)
+
+            sample.run_absolute_segforcecall(
+                data_directory=sample_output_ABSOLUTE_fc_dir,
+                R_path=R_path,
+                absolute_dir=absolute_dir,
+                skew=1,
+                run_cmds=run_cmds
+            )
+
     def run_phylogicNDT(
         self, 
         python2_path='python2',
@@ -1532,6 +1613,12 @@ class Patient:
         self.run_ABSOLUTE_samples(
             R_path='Rscript',
             absolute_split_maf_indel_snp_python_path="./src/ABSOLUTE/src/split_maf_indel_snp.py",
+            absolute_dir='./src/ABSOLUTE/v1.5',
+            run_cmds=overwrite
+        )
+
+        self.run_ABSOLUTE_segforcecall_samples(
+            R_path='Rscript',
             absolute_dir='./src/ABSOLUTE/v1.5',
             run_cmds=overwrite
         )
