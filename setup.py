@@ -30,6 +30,7 @@ setuptools.setup(
         'dash',
         'pysam',
         'scipy',
+        'wheel',
     ]
 )   
 
